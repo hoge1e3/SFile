@@ -2,7 +2,7 @@ import * as _assert from "assert";
 import * as fs from "fs";
 import * as path from "path";
 import * as zip from "jszip";
-import {FileSystemFactory,SFile,Content, DirectoryOptions, DirTree, MetaInfo, ExcludeOption, ExcludeHash} from "../src/SFile";
+import {FileSystemFactory,SFile,Content, DirectoryOptions, DirTree, MetaInfo, ExcludeOption, ExcludeHash} from "../src/SFile.js";
 const assert = Object.assign(
     (b:any, m?:string)=>_assert.ok(b,m),{
     eq:_assert.equal,   
@@ -19,22 +19,24 @@ let pass:number=0;
 let testf: SFile;
 try {
     const FS=new FileSystemFactory({fs, path});
-    const topDir=FS.get(import.meta.url).rel("fixture/");
+    console.log(import.meta.url);
+    const topDir=FS.get(import.meta.url).sibling("fixture/");
     const root=topDir.setPolicy({topDir});
     let cd =root;
     const r=root.rel.bind(root);
     const romd=r("rom/");
     // check relpath:
     //  path= /a/b/c   base=/a/b/  res=c
-
-    assert(r("a/b/c").relPath(r("a/b/")) === "c");
-    assert(r("a/b/c").relPath(root.rel("a/b/")) === "c");
+    assert.eq(r("a/b/c").relPath(r("a/b/")) , "c");
+    assert.eq(r("a/b/c").relPath(root.rel("a/b/")) , "c");
     //  path= /a/b/c/   base=/a/b/  res=c/
-    assert(r("a/b/c/").relPath(r("a/b/")) === "c/");
+    assert(r("a/b/c/").path().endsWith("/"), "endsWith/ "+r("a/b/c/").path());
+    assert(r("a/b/c/").isDirPath(), "dirpath");
+    assert.eq(r("a/b/c/").relPath(r("a/b/")) ,"c/");
     //  path= /a/b/c/   base=/a/b/c/d  res= ../
-    assert(r("a/b/c/").relPath(r("a/b/c/d")) === "../");
+    assert.eq(r("a/b/c/").relPath(r("a/b/c/d")) , "../");
     //  path= /a/b/c/   base=/a/b/e/f  res= ../../c/
-    assert(r("a/b/c/").relPath(r("a/b/e/f")) === "../../c/");
+    assert.eq(r("a/b/c/").relPath(r("a/b/e/f")) , "../../c/");
     // ext()
     assert.eq(root.rel("test.txt").ext(), ".txt");
     //assert.eq(P.normalize("c:\\hoge/fuga\\piyo//"), "c:/hoge/fuga/piyo/");
@@ -61,6 +63,7 @@ try {
         //--- check lastUpdate
         let d = performance.now();
         testf.text(testd.path());
+        console.log("lastUpdate", testf.lastUpdate(), d);
         assert(Math.abs(testf.lastUpdate() - d) <= 1000);
         testd.rel("test.txt").text(ABCD);
         assert(romd.rel("Actor.tonyu").text().length > 0);
@@ -168,7 +171,7 @@ try {
             pass=2;
             console.log("Test #", pass);
             testf = root.rel("testfn.txt");
-            testd = cd = r(testf.text());
+            testd = cd = FS.get(testf.text());
             assert(cd.exists());
             console.log("Enter", cd);
             assert(testd.rel("test.txt").text() === ABCD);

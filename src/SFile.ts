@@ -1,8 +1,9 @@
 
 import { DropArgument } from "node:net";
-import { default as Content } from "./Content";
-import {MIMETypes,defaultMIMETYpes} from "./MIMETypes";
-export { default as Content } from "./Content";
+import { default as Content } from "./Content.js";
+import {MIMETypes,defaultMIMETYpes} from "./MIMETypes.js";
+export { default as Content } from "./Content.js";
+import * as assert from "node:assert";
 type DependencyContainer={
   fs: typeof import("node:fs"),
   path: typeof import("node:path"),
@@ -30,7 +31,17 @@ export class FileSystemFactory {
   }
   _normalizePath(inputPath:string) {
     // Normalize path to use forward slashes and resolve to absolute path
-    return this.deps.path.resolve(inputPath).replace(/\\/g, '/');
+    if (inputPath.startsWith("file://")) {
+      /*
+       Windows:  file:///C:/folder/file.txt  -> C:/folder/file.txt
+       Unix/Linux: file:///home/user/file.txt -> /home/user/file.txt
+      */
+      inputPath=inputPath.substring("file://".length);
+      if (inputPath.match(/^\/[a-zA-Z]:/)) {
+        inputPath=inputPath.substring(1);
+      }
+    }
+    return this.deps.path.resolve(inputPath).replace(/\\/g,"/")+(inputPath.match(/[\/\\]$/)?"/":"");
   }
   get(inputPath:string) {
     const normalizedPath = this._normalizePath(inputPath);
@@ -44,18 +55,20 @@ export type DirTree = { [key: string]: MetaInfo | DirTree };
 
 export class SFile {
   #path:string;
+  readonly _path:string;// Just debug info
   #fs:FileSystemFactory;
   #policy: Policy|undefined;
   constructor(__fs:FileSystemFactory, filePath:string, policy?: Policy) {
     this.#fs=__fs;
     this.#path = __fs._normalizePath(filePath); 
-    if (!this.#path.endsWith("/") && this.isDir()) {
+    if (!this.isDirPath() && this.isDir()) {
       this.#path+="/";
     }
     this.#policy=policy;
     if (policy && !policy.topDir.contains(this)) {
       throw new Error(`Cannot create files outside ${policy.topDir}`);
     }
+    this._path=this.#path;
   }
   setPolicy(p:Policy) {
     if (this.#policy) throw new Error("policy already set");
@@ -186,6 +199,9 @@ export class SFile {
     const {fs,path}=this.#fs.deps;
     return this.exists() && fs.statSync(this.#path).isDirectory();
   }
+  isDirPath(){
+    return this.#path.endsWith("/");
+  }
 
   // Path and naming methods
   path() {
@@ -222,11 +238,12 @@ export class SFile {
 
   relPath(base:SFile) {
     const {fs,path}=this.#fs.deps;
-    return path.relative(base.path(), this.#path);
+    return path.relative(base.path(), this.#path).replace(/\\/g,"/")+(this.isDirPath()?"/":"");
   }
 
   rel(relPath:string) {
     const {fs,path}=this.#fs.deps;
+    assert.ok(!path.isAbsolute(relPath), `rel: ${relPath} should be relative`);
     return this.clone(path.join(this.#path, relPath));
   }
 
@@ -512,4 +529,5 @@ export class SFile {
       }
     };
   }
+
 }
