@@ -16,7 +16,8 @@ const alert:Function=(s:string)=>console.log("ALERT",s);
         
 export async function main(){
 let pass:number=0;
-let testf: SFile;
+//let testf: SFile;
+const cleanups=[] as Function[];
 try {
     const FS=new FileSystemFactory({fs, path});
     console.log(import.meta.url);
@@ -49,8 +50,8 @@ try {
     //assert(r.indexOf("rom/")>=0, r);
     //let romd = root.rel("rom/");
     //let ramd = root.rel("ram/");
-    testf = root.rel("testfn.txt");
-    
+    const testf = root.rel("testfn.txt");
+    cleanups.push(()=>testf.exists() && testf.rm());  
     let testd: SFile;
     if (!testf.exists()) {
         pass=1;
@@ -61,26 +62,35 @@ try {
         //--- check exists
         assert(testd.exists());
         //--- check lastUpdate
-        let d = performance.now();
+        let d = new Date().getTime();
         testf.text(testd.path());
         console.log("lastUpdate", testf.lastUpdate(), d);
         assert(Math.abs(testf.lastUpdate() - d) <= 1000);
         testd.rel("test.txt").text(ABCD);
         assert(romd.rel("Actor.tonyu").text().length > 0);
         testd.rel("sub/test2.txt").text(romd.rel("Actor.tonyu").text());
-        let tncnt = 0;
-        romd.recursive(()=>tncnt++, { 
-            excludes:(f:SFile)=>!f.isDir() && f.ext() !== ".tonyu"
+        let tncnt:string[] = [];
+        const pushtn=(f:SFile)=>tncnt.push(f.relPath(romd));
+        romd.recursive(pushtn, { 
+            // Notice: f.ext() !== ".tonyu" only does not work since it skips directories (and *.tonyu file its subdirectories).
+            excludes:(f:SFile)=>(!f.isDir() && f.ext() !== ".tonyu")
         });
-        console.log(".tonyu files in romd/", tncnt);
-        assert.eq(tncnt, 46, "tncnt");
-        tncnt = 0;
+        console.log(".tonyu files in "+romd, tncnt);
+        assert.eq(tncnt.length, 46, "tncnt");
+
+        tncnt = [];
+        romd.recursive(pushtn, { 
+            excludes:(f:SFile)=>!f.isDir(),
+            includeDir:true,
+        });
+        console.log("directories in "+romd, tncnt);
+        assert.eq(tncnt.length, 9, "tncnt");
+
+        tncnt = [];
         let exdirs = ["physics/", "event/", "graphics/"];
-        romd.recursive(function (/*f*/) {
-            tncnt++;
-        }, { excludes: exdirs });
-        console.log("files in romd/ except", exdirs, tncnt);
-        assert.eq(tncnt, 33, "tncnt");
+        romd.recursive(pushtn, { excludes: exdirs });
+        console.log("files in "+ romd+" except", exdirs, tncnt);
+        assert.eq(tncnt.length, 33, "tncnt");
         checkGetDirTree(romd);
 
         assert(testd.rel("sub/").exists());
@@ -170,7 +180,7 @@ try {
         try {
             pass=2;
             console.log("Test #", pass);
-            testf = root.rel("testfn.txt");
+            //testf = root.rel("testfn.txt");
             testd = cd = FS.get(testf.text());
             assert(cd.exists());
             console.log("Enter", cd);
@@ -221,7 +231,7 @@ try {
     console.log((e as any).stack);
     alert("#"+pass+" test Failed. "+e);
     try {
-        //testf.rm();
+        for (let c of cleanups) c();
     } catch (e) {
         console.error(e);
     }

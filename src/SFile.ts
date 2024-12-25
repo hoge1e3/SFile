@@ -88,6 +88,9 @@ export class SFile {
     }
     return this.setText(str);
   }
+  lines():string[] {
+    return this.getText().split("\n");
+  }
   getText():string{
     const {fs,path}=this.#fs.deps;
     return fs.readFileSync(this.#path, 'utf8');
@@ -365,34 +368,29 @@ export class SFile {
   recursive(a1?:FileCallback|DirectoryOptions, a2?:DirectoryOptions) {
     const options:DirectoryOptions=a2 ?? ((a1 && typeof a1==="object") ? a1 : {});
     const callback:FileCallback|undefined=(a1 && typeof a1==="function" ? a1 : undefined); 
-    const {fs,path}=this.#fs.deps;
-    const includeDir=options.includeDir;
     this.assertDir();
-    const {excludesF}=this.parseExcludeOption(options);
-    const walk = (dir:SFile) => {
-      dir.each((file:SFile) => {
-        if (file.isDir()) {
-          walk(file);
-        }
-        if (callback) {
-          callback(file);
-        }
-      }, options);
-    };
     if (callback) {
-      walk(this);
+      for (let file of this.recursive(options)) {
+        callback(file);
+      }
       return this;
     } else {
+      const includeDir=options.includeDir;
+      const {excludesF}=this.parseExcludeOption(options);
       const self=this;
       return {
         *[Symbol.iterator](){
           function* walk(dir: SFile):Generator<SFile> {
+            //console.log("walk", dir.path(),includeDir);
+            if (includeDir) {
+              yield dir;
+            }
             for (const file of dir.listFiles(options)) {
-              if (excludesF(file)) continue;
               if (file.isDir()) {
                 yield* walk(file);
-              }              
-              yield file;
+              } else {
+                yield file;
+              }             
             }
           }
           yield* walk(self);
@@ -448,7 +446,7 @@ export class SFile {
                     Object.assign(dest, file.getDirTree(newoption));
                     break;
                 case "hierarchical":
-                    dest[this.name()] = this.getDirTree(newoption);
+                    dest[this.name()] = file.getDirTree(newoption);
                     break;
             }
         } else {
