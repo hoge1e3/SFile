@@ -104,11 +104,13 @@ export class SFile {
   }
   setText(str:string):this {
     const {fs,path}=this.#fs.deps;
+    this.prepareDir();
     fs.writeFileSync(this.#path, str, 'utf8');
     return this;
   }
   appendText(str:string) {
     const {fs,path}=this.#fs.deps;
+    this.prepareDir();
     fs.appendFileSync(this.#path, str);
   }
   getBlob() {
@@ -140,6 +142,7 @@ export class SFile {
   }
   setBytes(b: ArrayBuffer|Buffer) {
     const {fs,path}=this.#fs.deps;
+    this.prepareDir();
     if (Content.isArrayBuffer(b)) {
       const bb=Buffer.from(b);
       fs.writeFileSync(this.#path, bb);
@@ -315,6 +318,7 @@ export class SFile {
   }
   setContent(c:Content):this{
     const {fs,path}=this.#fs.deps;
+    this.prepareDir();
     if (c.hasPlainText()) {
       fs.writeFileSync(this.#path, c.toPlainText());
     } else{
@@ -485,7 +489,7 @@ export class SFile {
 
   ls(options?:DirectoryOptions) {
     const {fs,path}=this.#fs.deps;
-    if (!options) return fs.readdirSync(this.#path);
+    //if (!options) return fs.readdirSync(this.#path);
     return this.listFiles(options).map(f=>f.name());
   }
 
@@ -493,6 +497,10 @@ export class SFile {
     const {fs,path}=this.#fs.deps;
     fs.mkdirSync(this.#path, { recursive: true });
     return this;
+  }
+  prepareDir(){
+    const p=this.up();
+    return p.exists() || p.mkdir();
   }
   contains(file:SFile) {
     return file.path().startsWith(this.path());

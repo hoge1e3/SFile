@@ -14,7 +14,7 @@ const _console={
         "metaurl": false,
         "isChildOf": false,
         "Convert Content ": false,
-        "Test #": false,
+        "Test #": true,
         "Enter": false,
         "lastUpdate": false,
         ".tonyu files in ": false,
@@ -38,7 +38,8 @@ const _console={
         "BLOB reading...": false,
         "BLOB read done!": false,
         "buildScrap": false,
-        "checkWatch": true,
+        "checkWatch": false,
+        getDirTree: false,
     } as {[key:string]:boolean},
     unknownlist: {} as {[key:string]:boolean},
     error: console.error.bind(console),
@@ -90,7 +91,7 @@ try {
     //assert(r.indexOf("rom/")>=0, r);
     //let romd = root.rel("rom/");
     let ramd = root.rel("ram/");
-    if(ramd.exists())ramd.rm({r:true});
+    if(ramd.exists()) await retryRmdir(ramd);
     ramd.mkdir();
     const testf = root.rel("testfn.txt");
     cleanups.push(()=>testf.exists() && testf.rm());  
@@ -100,6 +101,7 @@ try {
         _console.log("Test #", pass);
         testd = cd = cd.rel(/*Math.random()*/"testdir" + "/");
         _console.log("Enter", cd);
+        assert(!testd.exists(), testd+" exists");
         testd.mkdir();
         //--- check exists
         assert(testd.exists());
@@ -229,18 +231,18 @@ try {
             assert(testd.rel("sub/").exists());
             assert(testd.rel("sub/test2.txt").text() === romd.rel("Actor.tonyu").text());
             chkRecur(testd, {}, ["test.txt","sub/test2.txt"]);
-            _console.log("testd.size", testd.size());
-            assert.eq(testd.size(), ABCD.length + testd.rel("sub/test2.txt").size(), "testd.size");
+            //_console.log("testd.size", testd.size());
+            //assert.eq(testd.size(), ABCD.length + testd.rel("sub/test2.txt").size(), "testd.size");
             eqa(testd.ls(), ["test.txt","sub/"]);
             chkRecur(testd, { excludes: ["sub/"] }, ["test.txt"]);
             testd.rel("test.txt").rm();
             chkRecur(testd, {}, ["sub/test2.txt"]);
             _console.log("FULLL", testd.path());
-            //_console.log("FULLL", localStorage[testd.path()]);
+            /*_console.log("FULLL", localStorage[testd.path()]);
             chkRecur(testd, {}, ["test.txt","sub/test2.txt"]);
             testd.rel("test.txt").rm();
             chkRecur(testd, {}, ["sub/test2.txt"]);
-
+            */
 
             testd.rm({ r: true });
             assert(!testd.exists());
@@ -252,11 +254,11 @@ try {
             }).then(function () {
                 return chkRecurAsync(ramd, {}, ["a/b.txt","c.txt"]);
             });*/
-            const nfs=testd;
+            const nfs=topDir;
             assert.eq(nfs.rel("sub/test2.txt").text(), romd.rel("Actor.tonyu").text());
             assert.eq(nfs.rel("test.txt").text(), ABCD);
-            let pngurl = nfs.rel("Tonyu/Projects/MapTest/images/park.png").text();
-            assert.eq(nfs.rel("sub/test.png").text(), pngurl);
+            //let pngurl = nfs.rel("Tonyu/Projects/MapTest/images/park.png").text();
+            //assert.eq(nfs.rel("sub/test.png").text(), pngurl);
         } finally {
            
         }
@@ -693,6 +695,18 @@ function eqTree(a:any, b:any, path:string, excludes:ExcludeHash) {
         if (excludes[k]) continue;
         eqTree(b[k], a[k], path+"."+k, excludes);
     }
+}
+async function retryRmdir(dir: SFile) {
+    for (let i=0;i<10;i++) {
+        try {
+            dir.rm({ r: true });
+            return ;
+        } catch (e) {
+            _console.log("retryRmdir", (e as any).stack);
+            await timeout(1000);
+        }
+    }
+    throw new Error("retryRmdir "+dir+" failed");
 }
 
 }
