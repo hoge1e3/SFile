@@ -22,7 +22,7 @@ try {
     const FS=new FileSystemFactory({fs, path});
     console.log(import.meta.url);
     const topDir=FS.get(import.meta.url).sibling("fixture/");
-    const root=topDir.setPolicy({topDir});
+    const root=topDir;//.setPolicy({topDir});
     let cd =root;
     const r=root.rel.bind(root);
     const romd=r("rom/");
@@ -41,6 +41,7 @@ try {
     // ext()
     assert.eq(root.rel("test.txt").ext(), ".txt");
     //assert.eq(P.normalize("c:\\hoge/fuga\\piyo//"), "c:/hoge/fuga/piyo/");
+    console.log(r("hoge/fuga\\"),(r("hoge\\fuga/piyo//")), "isChildOf");
     assert(r("hoge/fuga\\").contains(r("hoge\\fuga/piyo//")), "isChildOf");
     assert(!r("hoge/fugo\\").contains(r("hoge\\fuga/piyo//")), "!isChildOf");
     testContent();
@@ -49,7 +50,9 @@ try {
     //obsolate: ls does not enum mounted dirs
     //assert(r.indexOf("rom/")>=0, r);
     //let romd = root.rel("rom/");
-    //let ramd = root.rel("ram/");
+    let ramd = root.rel("ram/");
+    if(ramd.exists())ramd.rm({r:true});
+    ramd.mkdir();
     const testf = root.rel("testfn.txt");
     cleanups.push(()=>testf.exists() && testf.rm());  
     let testd: SFile;
@@ -109,7 +112,7 @@ try {
         });
         sf.rel("test3.txt").rm();
         assert(!testd.rel("test3.txt").exists());
-        let ramd=r("ram/");
+        //let ramd=r("ram/");
         ramd.rel("toste.txt").text("fuga");
         assert.ensureError(function () {
             ramd.rel("files").link(testd);

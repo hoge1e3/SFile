@@ -41,7 +41,13 @@ export class FileSystemFactory {
         inputPath=inputPath.substring(1);
       }
     }
-    return this.deps.path.resolve(inputPath).replace(/\\/g,"/")+(inputPath.match(/[\/\\]$/)?"/":"");
+    return (
+      this.deps.path.
+        resolve(inputPath).
+        replace(/\\/g,"/")
+	  +(inputPath.match(/[\/\\]$/)?
+	      "/":"")
+	).replace(/\/+/g,"/");
   }
   get(inputPath:string) {
     const normalizedPath = this._normalizePath(inputPath);
@@ -446,7 +452,7 @@ export class SFile {
                     Object.assign(dest, file.getDirTree(newoption));
                     break;
                 case "hierarchical":
-                    dest[this.name()] = file.getDirTree(newoption);
+                    dest[file.name()] = file.getDirTree(newoption);
                     break;
             }
         } else {
@@ -458,7 +464,7 @@ export class SFile {
                     dest[relPath] = meta;
                     break;
                 case "hierarchical":
-                    dest[this.name()] = meta;
+                    dest[file.name()] = meta;
                     break;
             }
         }
