@@ -7,6 +7,7 @@ import * as assert from "node:assert";
 type DependencyContainer={
   fs: typeof import("node:fs"),
   path: typeof import("node:path"),
+  //process: typeof import("node:process"),
 }
 export type MetaInfo={
   lastUpdate:number,
@@ -147,10 +148,10 @@ export class SFile {
     }
     return b;
   }
-  getBytes({ binType = ArrayBuffer } = {}) {
+  getBytes({ binType }:{binType:(typeof Buffer|typeof ArrayBuffer)} = {binType:Buffer}) {
     const {fs,path}=this.#fs.deps;
     const buffer = fs.readFileSync(this.#path);
-    return binType === ArrayBuffer ? buffer.buffer : buffer;
+    return binType === ArrayBuffer ? Content.buffer2ArrayBuffer(buffer) : buffer;
   }
   dataURL(url:string):this;
   dataURL():string;
@@ -301,16 +302,16 @@ export class SFile {
   }
   getContent():Content{
     const {fs,path}=this.#fs.deps;
-    if (this.isText()) {
+    /*if (this.isText()) {
       const text=fs.readFileSync(this.#path, "utf-8");
       if (Content.looksLikeDataURL(text)) {
         return Content.url(text);
       } else {
         return Content.plainText(text);
       }
-    } else {
+    } else {*/
       return Content.bin(fs.readFileSync(this.#path),this.contentType());
-    }
+    //}
   }
   setContent(c:Content):this{
     const {fs,path}=this.#fs.deps;
@@ -504,7 +505,7 @@ export class SFile {
   }
   link(to:SFile) {
     const {fs,path}=this.#fs.deps;
-    fs.symlinkSync(to.path(), this.#path);
+    fs.symlinkSync(to.path(), this.#path, "junction");
   }
   resolveLink() {
     const {fs,path}=this.#fs.deps;

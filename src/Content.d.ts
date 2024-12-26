@@ -6,6 +6,7 @@ export default class Content {
     static bin(bin:ContentBuffer, contentType: string):Content;
     static isArrayBuffer(buf:ArrayBuffer|Buffer): buf is ArrayBuffer;
     static looksLikeDataURL(text:string):boolean;
+    static buffer2ArrayBuffer(buf:Buffer):ArrayBuffer;
     toURL():string;
     toBin(binType:typeof Buffer):Buffer;
     toBin(binType:typeof ArrayBuffer):ArrayBuffer;
