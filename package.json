@@ -26,6 +26,7 @@
   "files": [
     "js/src"
   ],
+  "types":"js/src/SFile.d.ts",
   "devDependencies": {
     "jszip": "^3.10.1"
   }
