@@ -24,6 +24,11 @@ export type GetDirStyle = "flat-absolute" | "flat-relative" | "hierarchical" | "
 export type GetDirTreeOptions={excludes?: ExcludeOption|GetDirTreeExcludeFunction , style:GetDirStyle, base?:SFile};
 export type GetDirTreeExcludeFunctionArgs={fullPath:string, relPath:string, style:GetDirStyle};
 export type FileCallback=(f:SFile)=>any;
+export async function getNodeFS():Promise<FileSystemFactory> {
+  const fs = await import(/* webpackIgnore: true */"node:fs");
+  const path = await import(/* webpackIgnore: true */"node:path");
+  return new FileSystemFactory({fs, path, Buffer});
+}
 export class FileSystemFactory {
   mimeTypes: MIMETypes=defaultMIMETYpes;
   constructor(public deps: DependencyContainer) {
@@ -143,12 +148,8 @@ export class SFile {
     return this;
   }
   setBytes(b: ArrayBuffer|Buffer) {
-<<<<<<< HEAD
     const {fs,path,Buffer}=this.#fs.deps;
-=======
-    const {fs,path}=this.#fs.deps;
     this.prepareDir();
->>>>>>> refs/remotes/origin/main
     if (Content.isArrayBuffer(b)) {
       const bb=Buffer.from(b);
       fs.writeFileSync(this.#path, bb);
@@ -323,12 +324,8 @@ export class SFile {
     //}
   }
   setContent(c:Content):this{
-<<<<<<< HEAD
     const {fs,path,Buffer}=this.#fs.deps;
-=======
-    const {fs,path}=this.#fs.deps;
     this.prepareDir();
->>>>>>> refs/remotes/origin/main
     if (c.hasPlainText()) {
       fs.writeFileSync(this.#path, c.toPlainText());
     } else{

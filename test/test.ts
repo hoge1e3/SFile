@@ -2,7 +2,7 @@ import * as _assert from "assert";
 import * as fs from "fs";
 import * as path from "path";
 import * as zip from "jszip";
-import {FileSystemFactory,SFile,Content, DirectoryOptions, DirTree, MetaInfo, ExcludeOption, ExcludeHash} from "../src/SFile.js";
+import {FileSystemFactory,SFile,Content, DirectoryOptions, DirTree, MetaInfo, ExcludeOption, ExcludeHash, getNodeFS} from "../src/SFile.js";
 const assert = Object.assign(
     (b:any, m?:string)=>_assert.ok(b,m),{
     eq:_assert.equal,   
@@ -40,6 +40,7 @@ const _console={
         "buildScrap": false,
         "checkWatch": false,
         getDirTree: false,
+        FULLL: false,
     } as {[key:string]:boolean},
     unknownlist: {} as {[key:string]:boolean},
     error: console.error.bind(console),
@@ -59,7 +60,7 @@ let pass:number=0;
 //let testf: SFile;
 const cleanups=[] as Function[];
 try {
-    const FS=new FileSystemFactory({fs, path});
+    const FS=await getNodeFS();
     _console.log("metaurl",import.meta.url);
     const topDir=FS.get(import.meta.url).sibling("fixture/");
     const root=topDir;//.setPolicy({topDir});
@@ -263,6 +264,7 @@ try {
            
         }
     }
+    if(ramd.exists()) await retryRmdir(ramd);
     console.log("passed", "#"+pass);
     if (pass==1) {
         await timeout(1000);
