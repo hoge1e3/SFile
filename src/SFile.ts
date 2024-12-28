@@ -8,6 +8,7 @@ type DependencyContainer={
   fs: typeof import("node:fs"),
   path: typeof import("node:path"),
   Buffer: typeof Buffer,
+  //process: typeof import("node:process"),
 }
 export type MetaInfo={
   lastUpdate:number,
@@ -105,11 +106,13 @@ export class SFile {
   }
   setText(str:string):this {
     const {fs,path}=this.#fs.deps;
+    this.prepareDir();
     fs.writeFileSync(this.#path, str, 'utf8');
     return this;
   }
   appendText(str:string) {
     const {fs,path}=this.#fs.deps;
+    this.prepareDir();
     fs.appendFileSync(this.#path, str);
   }
   getBlob() {
@@ -140,7 +143,12 @@ export class SFile {
     return this;
   }
   setBytes(b: ArrayBuffer|Buffer) {
+<<<<<<< HEAD
     const {fs,path,Buffer}=this.#fs.deps;
+=======
+    const {fs,path}=this.#fs.deps;
+    this.prepareDir();
+>>>>>>> refs/remotes/origin/main
     if (Content.isArrayBuffer(b)) {
       const bb=Buffer.from(b);
       fs.writeFileSync(this.#path, bb);
@@ -149,10 +157,10 @@ export class SFile {
     }
     return b;
   }
-  getBytes({ binType = ArrayBuffer } = {}) {
+  getBytes({ binType }:{binType:(typeof Buffer|typeof ArrayBuffer)} = {binType:Buffer}) {
     const {fs,path}=this.#fs.deps;
     const buffer = fs.readFileSync(this.#path);
-    return binType === ArrayBuffer ? buffer.buffer : buffer;
+    return binType === ArrayBuffer ? Content.buffer2ArrayBuffer(buffer) : buffer;
   }
   dataURL(url:string):this;
   dataURL():string;
@@ -303,19 +311,24 @@ export class SFile {
   }
   getContent():Content{
     const {fs,path}=this.#fs.deps;
-    if (this.isText()) {
+    /*if (this.isText()) {
       const text=fs.readFileSync(this.#path, "utf-8");
       if (Content.looksLikeDataURL(text)) {
         return Content.url(text);
       } else {
         return Content.plainText(text);
       }
-    } else {
+    } else {*/
       return Content.bin(fs.readFileSync(this.#path),this.contentType());
-    }
+    //}
   }
   setContent(c:Content):this{
+<<<<<<< HEAD
     const {fs,path,Buffer}=this.#fs.deps;
+=======
+    const {fs,path}=this.#fs.deps;
+    this.prepareDir();
+>>>>>>> refs/remotes/origin/main
     if (c.hasPlainText()) {
       fs.writeFileSync(this.#path, c.toPlainText());
     } else{
@@ -486,7 +499,7 @@ export class SFile {
 
   ls(options?:DirectoryOptions) {
     const {fs,path}=this.#fs.deps;
-    if (!options) return fs.readdirSync(this.#path);
+    //if (!options) return fs.readdirSync(this.#path);
     return this.listFiles(options).map(f=>f.name());
   }
 
@@ -494,6 +507,10 @@ export class SFile {
     const {fs,path}=this.#fs.deps;
     fs.mkdirSync(this.#path, { recursive: true });
     return this;
+  }
+  prepareDir(){
+    const p=this.up();
+    return p.exists() || p.mkdir();
   }
   contains(file:SFile) {
     return file.path().startsWith(this.path());
@@ -506,7 +523,7 @@ export class SFile {
   }
   link(to:SFile) {
     const {fs,path}=this.#fs.deps;
-    fs.symlinkSync(to.path(), this.#path);
+    fs.symlinkSync(to.path(), this.#path, "junction");
   }
   resolveLink() {
     const {fs,path}=this.#fs.deps;

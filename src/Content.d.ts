@@ -7,6 +7,7 @@ export default class Content {
     static isArrayBuffer(buf:ArrayBuffer|Buffer): buf is ArrayBuffer;
     static looksLikeDataURL(text:string):boolean;
     static setBufferPolyfill(b:typeof Buffer);
+    static buffer2ArrayBuffer(buf:Buffer):ArrayBuffer;
     toURL():string;
     toBin(binType:typeof Buffer):Buffer;
     toBin(binType:typeof ArrayBuffer):ArrayBuffer;
