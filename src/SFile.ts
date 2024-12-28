@@ -7,6 +7,7 @@ import * as assert from "node:assert";
 type DependencyContainer={
   fs: typeof import("node:fs"),
   path: typeof import("node:path"),
+  Buffer: typeof Buffer,
 }
 export type MetaInfo={
   lastUpdate:number,
@@ -25,6 +26,7 @@ export type FileCallback=(f:SFile)=>any;
 export class FileSystemFactory {
   mimeTypes: MIMETypes=defaultMIMETYpes;
   constructor(public deps: DependencyContainer) {
+      Content.setBufferPolyfill(deps.Buffer);
   }
   addMIMEType(extension:string, contentType:string) {
     this.mimeTypes[extension]=contentType;
@@ -138,7 +140,7 @@ export class SFile {
     return this;
   }
   setBytes(b: ArrayBuffer|Buffer) {
-    const {fs,path}=this.#fs.deps;
+    const {fs,path,Buffer}=this.#fs.deps;
     if (Content.isArrayBuffer(b)) {
       const bb=Buffer.from(b);
       fs.writeFileSync(this.#path, bb);
@@ -313,7 +315,7 @@ export class SFile {
     }
   }
   setContent(c:Content):this{
-    const {fs,path}=this.#fs.deps;
+    const {fs,path,Buffer}=this.#fs.deps;
     if (c.hasPlainText()) {
       fs.writeFileSync(this.#path, c.toPlainText());
     } else{

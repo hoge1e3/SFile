@@ -1,11 +1,15 @@
 //define(["assert","Util","FileSaver"],function (assert,Util,saveAs) {
 //import Util from "./Util.js";
 import assert from "./assert.js";
-import {Buffer} from "buffer";
+//import {Buffer} from "buffer";
 //import saveAs from "file-saver";
 var Content=function () {};
 //var extend=Util.extend;
+let Buffer;
 // ------ constructor
+Content.setBufferPolyfill=(b)=>{
+    Buffer=b;  
+};    
 Content.plainText=function (s,contentType){
     var b=new Content();
     b.contentType=contentType||"text/plain";
