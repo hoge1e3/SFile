@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "build": "npx tsc",
-    "test": "npm run build && node js/test/test.js && node js/test/test.js"
+    "test": "npm run build && node test/test.js && node test/test.js"
   },
   "repository": {
     "type": "git",

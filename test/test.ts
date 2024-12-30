@@ -2,7 +2,7 @@ import * as _assert from "assert";
 import * as fs from "fs";
 import * as path from "path";
 import * as zip from "jszip";
-import {FileSystemFactory,SFile,Content, DirectoryOptions, DirTree, MetaInfo, ExcludeOption, ExcludeHash, getNodeFS} from "../src/SFile";
+import {FileSystemFactory,SFile,Content, DirectoryOptions, DirTree, MetaInfo, ExcludeOption, ExcludeHash, getNodeFS} from "../src/SFile.js";
 const assert = Object.assign(
     (b:any, m?:string)=>_assert.ok(b,m),{
     eq:_assert.equal,   

@@ -1,8 +1,8 @@
 
 import { DropArgument } from "node:net";
-import { default as Content } from "./Content";
-import {MIMETypes,defaultMIMETYpes} from "./MIMETypes";
-export { default as Content } from "./Content";
+import { default as Content } from "./Content.js";
+import {MIMETypes,defaultMIMETYpes} from "./MIMETypes.js";
+export { default as Content } from "./Content.js";
 import * as assert from "node:assert";
 type DependencyContainer={
   fs: typeof import("node:fs"),
