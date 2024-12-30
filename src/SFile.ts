@@ -68,6 +68,9 @@ export type Policy={
 export type DirTree = { [key: string]: MetaInfo | DirTree };
 
 export class SFile {
+  static is(obj:any):obj is SFile {
+    return obj instanceof SFile;
+  }
   #path:string;
   readonly _path:string;// Just debug info
   #fs:FileSystemFactory;

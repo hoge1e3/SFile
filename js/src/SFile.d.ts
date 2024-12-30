@@ -50,6 +50,7 @@ export type DirTree = {
 };
 export declare class SFile {
     #private;
+    static is(obj: any): obj is SFile;
     readonly _path: string;
     constructor(__fs: FileSystemFactory, filePath: string, policy?: Policy);
     setPolicy(p: Policy): SFile;
