@@ -1,5 +1,5 @@
 ﻿node_modules
-js/src/MIMETypes.js
-js/src/SFile.js
+src/MIMETypes.js
+src/SFile.js
 *.js.map
-js/test/test.js
+test/test.js

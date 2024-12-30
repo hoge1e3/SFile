@@ -2,7 +2,8 @@
   "name": "@hoge1e3/sfile",
   "version": "1.0.1",
   "description": "node.js fs Comprehensive File Wrapper",
-  "main": "js/src/SFile.js",
+  "main":  "./src/SFile.js",
+  "types": "./src/SFile.d.ts",
   "type": "module",
   "scripts": {
     "build": "npx tsc",
@@ -26,7 +27,6 @@
   "files": [
     "js/src"
   ],
-  "types":"js/src/SFile.d.ts",
   "devDependencies": {
     "jszip": "^3.10.1"
   }

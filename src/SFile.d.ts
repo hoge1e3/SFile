@@ -1,6 +1,6 @@
-import { default as Content } from "./Content.js";
-import { MIMETypes } from "./MIMETypes.js";
-export { default as Content } from "./Content.js";
+import { default as Content } from "./Content";
+import { MIMETypes } from "./MIMETypes";
+export { default as Content } from "./Content";
 type DependencyContainer = {
     fs: typeof import("node:fs");
     path: typeof import("node:path");
