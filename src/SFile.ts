@@ -123,7 +123,7 @@ export class SFile {
     this.prepareDir();
     fs.appendFileSync(this.#path, str);
   }
-  getBlob() {
+  getBlob():Blob {
     return new Blob([this.bytes()],{type:this.contentType()});
   }
   async setBlob(blob:Blob):Promise<ArrayBuffer> {

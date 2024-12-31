@@ -61,7 +61,7 @@ export declare class SFile {
     getText(): string;
     setText(str: string): this;
     appendText(str: string): void;
-    getBlob(): import("buffer").Blob;
+    getBlob(): Blob;
     setBlob(blob: Blob): Promise<ArrayBuffer>;
     obj(o: object): this;
     obj(): object;
