@@ -261,7 +261,9 @@ export class SFile {
 
   relPath(base:SFile) {
     const {fs,path}=this.#fs.deps;
-    return path.relative(base.path(), this.#path).replace(/\\/g,"/")+(this.isDirPath()?"/":"");
+    return (
+      path.relative(base.path(), this.#path).replace(/\\/g,"/")+(this.isDirPath()?"/":"")
+    ).replace(/\/+$/,"/");;
   }
 
   rel(relPath:string) {

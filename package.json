@@ -2,7 +2,7 @@
   "name": "@hoge1e3/sfile",
   "version": "1.0.5",
   "description": "node.js fs Comprehensive File Wrapper",
-  "main":  "./src/SFile.js",
+  "main": "./src/SFile.js",
   "types": "./src/SFile.d.ts",
   "type": "module",
   "scripts": {
@@ -28,6 +28,7 @@
     "src"
   ],
   "devDependencies": {
+    "@types/chai": "^5.0.1",
     "jszip": "^3.10.1"
   }
 }
