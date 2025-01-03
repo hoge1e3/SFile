@@ -3,3 +3,4 @@ src/MIMETypes.js
 src/SFile.js
 *.js.map
 test/test.js
+*.tgz
