@@ -3,7 +3,7 @@ import { DropArgument } from "node:net";
 import { default as Content } from "./Content.js";
 import {MIMETypes,defaultMIMETYpes} from "./MIMETypes.js";
 export { default as Content } from "./Content.js";
-import * as assert from "node:assert";
+import {assert} from "chai";
 type DependencyContainer={
   fs: typeof import("node:fs"),
   path: typeof import("node:path"),
@@ -58,8 +58,8 @@ export class FileSystemFactory {
 	).replace(/\/+/g,"/");
   }
   get(inputPath:string) {
-    const normalizedPath = this._normalizePath(inputPath);
-    return new SFile(this, normalizedPath);
+    //const normalizedPath = this._normalizePath(inputPath);
+    return new SFile(this, inputPath);//normalizedPath);
   }
 }
 export type Policy={
