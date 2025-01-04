@@ -4,8 +4,19 @@ const assert = Object.assign(
     (b:any, m?:string)=>_assert.ok(b,m),{
     eq:_assert.equal,   
     ensureError: _assert.throws,
+    func<T extends (...args: any[]) => any>(f:T) {
+        return ((...args:Parameters<T>):ReturnType<T>=>{
+            try {
+                return f(...args);
+            } catch(e) {
+                console.log(f.name+" failed. args:",...args);
+                throw e;
+            }
+        }) as T;
+    }
     //deepStrictEqual: _assert.deepStrictEqual,
 });
+
 const _console={
     taglist: {
         "metaurl": false,
@@ -56,6 +67,7 @@ export async function main(){
 let pass:number=0;
 //let testf: SFile;
 const cleanups=[] as Function[];
+const eqTree=assert.func(_eqTree);
 try {
     const FS=await getNodeFS();
     _console.log("metaurl",import.meta.url);
@@ -98,6 +110,7 @@ try {
         pass=1;
         _console.log("Test #", pass);
         testd = cd = cd.rel(/*Math.random()*/"testdir" + "/");
+        cleanups.push(()=>testd.exists() && testd.rm({ r: true }));
         _console.log("Enter", cd);
         assert(!testd.exists(), testd+" exists");
         testd.mkdir();
@@ -118,7 +131,7 @@ try {
             excludes:(f:SFile)=>(!f.isDir() && f.ext() !== ".tonyu")
         });
         _console.log(".tonyu files in ", romd, tncnt);
-        assert.eq(tncnt.length, 46, "tncnt");
+        assert.eq(tncnt.length, 46, "tncnt: "+tncnt.length+"!==46");
 
         tncnt = [];
         romd.recursive(pushtn, { 
@@ -132,7 +145,7 @@ try {
         let exdirs = ["physics/", "event/", "graphics/"];
         romd.recursive(pushtn, { excludes: exdirs });
         _console.log("files in ", romd+" except", exdirs, tncnt);
-        assert.eq(tncnt.length, 33, "tncnt");
+        assert.eq(tncnt.length, 33, "tncnt 33!="+tncnt.length);
         checkGetDirTree(romd);
 
         assert(testd.rel("sub/").exists());
@@ -270,6 +283,7 @@ try {
         console.log("All test passed.");
     }
 } catch (e) {
+    process.exitCode = 1;
     console.log((e as any).stack);
     alert("#"+pass+" test Failed. "+e);
     try {
@@ -616,7 +630,9 @@ function getDirTree3Type(dir:SFile, excludes?:ExcludeOption) {
             }    
         }
         loop(hier,"");
-        assert(Object.keys(uncheckedRel).length==0,"Unchecked rel: "+Object.keys(uncheckedRel).length);
+        assert(Object.keys(uncheckedRel).length==0,
+        "Unchecked rel"+
+        `(${Object.keys(uncheckedRel).length}: ${Object.keys(uncheckedRel).join(",")}`);    
     }   
     function eqtree2(rel: DirTree, abs:DirTree){
         const uncheckedAbs={} as {[key:string]:number};
@@ -627,7 +643,8 @@ function getDirTree3Type(dir:SFile, excludes?:ExcludeOption) {
             delete uncheckedAbs[absk];
             eqTree(abs[absk], rel[k], k, exAttr);
         }
-        assert(Object.keys(uncheckedAbs).length==0,"Unchecked abs: "+Object.keys(uncheckedAbs).length);
+        assert(Object.keys(uncheckedAbs).length==0,"Unchecked abs"+
+        `${Object.keys(uncheckedAbs).length}: ${Object.keys(uncheckedAbs).join(",")}`); 
     }
 }
 function checkGetDirTree(dir: SFile) {
@@ -676,7 +693,7 @@ async function checkRemoveError(dir) {
     await dir.rm({r:true});
     assert(!dir.exists(), dir+" remains (checkRemove)");    
 }*/
-function eqTree(a:any, b:any, path:string, excludes:ExcludeHash) {
+function _eqTree(a:any, b:any, path:string, excludes:ExcludeHash) {
     assert.eq(typeof a, typeof b, "typeof not match:"+path);
     if (a==null) {
         assert(b==null, "both should be null: "+path);

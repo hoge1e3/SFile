@@ -3,7 +3,6 @@ import { DropArgument } from "node:net";
 import { default as Content } from "./Content.js";
 import {MIMETypes,defaultMIMETYpes} from "./MIMETypes.js";
 export { default as Content } from "./Content.js";
-import {assert} from "chai";
 type DependencyContainer={
   fs: typeof import("node:fs"),
   path: typeof import("node:path"),
@@ -66,7 +65,12 @@ export type Policy={
   topDir: SFile;
 }
 export type DirTree = { [key: string]: MetaInfo | DirTree };
-
+function truncSep(path:string) {
+  return path.replace(/[\/\\]+$/,"");
+}
+function addSep(path:string){
+  return truncSep(path)+"/";
+}
 export class SFile {
   static is(obj:any):obj is SFile {
     return obj instanceof SFile;
@@ -78,9 +82,9 @@ export class SFile {
   constructor(__fs:FileSystemFactory, filePath:string, policy?: Policy) {
     this.#fs=__fs;
     this.#path = __fs._normalizePath(filePath); 
-    if (!this.isDirPath() && this.isDir()) {
+    /*if (!this.isDirPath() && this.isDir()) {
       this.#path+="/";
-    }
+    }*/
     this.#policy=policy;
     if (policy && !policy.topDir.contains(this)) {
       throw new Error(`Cannot create files outside ${policy.topDir}`);
@@ -263,12 +267,12 @@ export class SFile {
     const {fs,path}=this.#fs.deps;
     return (
       path.relative(base.path(), this.#path).replace(/\\/g,"/")+(this.isDirPath()?"/":"")
-    ).replace(/\/+$/,"/");;
+    ).replace(/\/+$/,"/");
   }
 
   rel(relPath:string) {
     const {fs,path}=this.#fs.deps;
-    assert.ok(!path.isAbsolute(relPath), `rel: ${relPath} should be relative`);
+    if(path.isAbsolute(relPath)) throw new Error(`rel: ${relPath} should be relative`);
     return this.clone(path.join(this.#path, relPath));
   }
 
@@ -358,6 +362,7 @@ export class SFile {
       const pathR=this.path();
       let nex:ExcludeHash={};
       const cpath=(e:string)=>{
+        e=truncSep(e);
         if (e.startsWith("/")) {
           nex[e]=1;
         } else {
@@ -369,7 +374,7 @@ export class SFile {
       } else {
         for (let e in excludes) cpath(e);
       }
-      return {excludesF:(f)=>nex[f.path()]};
+      return {excludesF:(f)=>nex[truncSep(f.path())]};
     } else {
       return {excludesF:()=>false};
     }
@@ -429,17 +434,17 @@ export class SFile {
     if (typeof options.excludes==="function") {
         excludesFunc=options.excludes as GetDirTreeExcludeFunction;
     } else {
-        const excludesAry = options.excludes || [];
+        const excludesAry = (options.excludes || []).map(truncSep);
         const defaultExcludes=(f:SFile, {fullPath, relPath, ...options}: GetDirTreeExcludeFunctionArgs)=>{
             switch (options.style) {
                 case "flat-relative":
                 case "hierarchical":
-                    if (excludesAry.indexOf(relPath) >= 0) {
+                    if (excludesAry.indexOf(truncSep(relPath)) >= 0) {
                         return true;
                     }
                     break;
                 case "flat-absolute":
-                    if (excludesAry.indexOf(fullPath) >= 0) {
+                    if (excludesAry.indexOf(truncSep(fullPath)) >= 0) {
                         return true;
                     }
                     break;
@@ -469,7 +474,7 @@ export class SFile {
                     Object.assign(dest, file.getDirTree(newoption));
                     break;
                 case "hierarchical":
-                    dest[file.name()] = file.getDirTree(newoption);
+                    dest[addSep(file.name())] = file.getDirTree(newoption);
                     break;
             }
         } else {
@@ -502,7 +507,13 @@ export class SFile {
   ls(options?:DirectoryOptions) {
     const {fs,path}=this.#fs.deps;
     //if (!options) return fs.readdirSync(this.#path);
-    return this.listFiles(options).map(f=>f.name());
+    return this.listFiles(options).map(f=>f.fixSep().name());
+  }
+  fixSep(){
+    if (this.isDir()) {
+      this.#path=addSep(this.#path);
+    }
+    return this;
   }
 
   mkdir() {
@@ -515,7 +526,7 @@ export class SFile {
     return p.exists() || p.mkdir();
   }
   contains(file:SFile) {
-    return file.path().startsWith(this.path());
+    return truncSep(file.path()).startsWith(truncSep(this.path()));
   }
   isLink():string|null {
     const {fs,path}=this.#fs.deps;

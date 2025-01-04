@@ -114,6 +114,7 @@ export declare class SFile {
     getDirTree(options?: GetDirTreeOptions): DirTree;
     listFiles(options?: DirectoryOptions): SFile[];
     ls(options?: DirectoryOptions): string[];
+    fixSep(): this;
     mkdir(): this;
     prepareDir(): true | SFile;
     contains(file: SFile): boolean;
