@@ -1,6 +1,5 @@
 import { default as Content } from "./Content.js";
 import { MIMETypes } from "./MIMETypes.js";
-import { Stats } from "node:fs";
 export { default as Content } from "./Content.js";
 type DependencyContainer = {
     fs: typeof import("node:fs");
@@ -14,8 +13,8 @@ export type MetaInfo = {
     lastUpdate: number;
     link?: string;
     isDirPath?: boolean;
-    stat?: Stats;
-    lstat?: Stats;
+    stat?: import("node:fs").Stats;
+    lstat?: import("node:fs").Stats;
 };
 export type ExcludeFunction = (f: SFile) => boolean;
 export type ExcludeHash = {
