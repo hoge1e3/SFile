@@ -1,14 +1,21 @@
 import { default as Content } from "./Content.js";
 import { MIMETypes } from "./MIMETypes.js";
+import { Stats } from "node:fs";
 export { default as Content } from "./Content.js";
 type DependencyContainer = {
     fs: typeof import("node:fs");
     path: typeof import("node:path");
     Buffer: typeof Buffer;
 };
+type BinTypeOption = {
+    binType: typeof Buffer | typeof ArrayBuffer;
+};
 export type MetaInfo = {
     lastUpdate: number;
     link?: string;
+    isDirPath?: boolean;
+    stat?: Stats;
+    lstat?: Stats;
 };
 export type ExcludeFunction = (f: SFile) => boolean;
 export type ExcludeHash = {
@@ -19,6 +26,9 @@ export type DirectoryOptions = {
     excludes?: ExcludeOption;
     excludesF?: ExcludeFunction;
     includeDir?: boolean;
+};
+export type ListFilesOptions = DirectoryOptions & {
+    cacheMeta?: boolean;
 };
 export type GetDirTreeExcludeFunction = (f: SFile, options: GetDirTreeExcludeFunctionArgs) => boolean;
 export type GetDirStyle = "flat-absolute" | "flat-relative" | "hierarchical" | "no-recursive";
@@ -48,10 +58,23 @@ export type Policy = {
 export type DirTree = {
     [key: string]: MetaInfo | DirTree;
 };
+export declare class Cache<T> {
+    private value;
+    timestamp: number;
+    set(v: Partial<T>): void;
+    poke(v: Partial<T>): void;
+    get(duration?: number): Partial<T>;
+    valid(duration?: number): boolean;
+}
+export type CachedInfo = {
+    meta: MetaInfo;
+    content: Content;
+};
 export declare class SFile {
     #private;
     static is(obj: any): obj is SFile;
     readonly _path: string;
+    cache: Cache<CachedInfo>;
     constructor(__fs: FileSystemFactory, filePath: string, policy?: Policy);
     setPolicy(p: Policy): SFile;
     clone(_path?: string): SFile;
@@ -69,13 +92,15 @@ export declare class SFile {
     bytes(b: Buffer): this;
     bytes(): Buffer;
     setBytes(b: ArrayBuffer | Buffer): ArrayBuffer | Buffer<ArrayBufferLike>;
-    getBytes({ binType }?: {
-        binType: (typeof Buffer | typeof ArrayBuffer);
-    }): ArrayBuffer;
+    getBytes({ binType }?: BinTypeOption): Buffer | ArrayBuffer;
     dataURL(url: string): this;
     dataURL(): string;
-    getMetaInfo(): MetaInfo;
-    setMetaInfo(m: MetaInfo): void;
+    getMetaInfo({ nofollow }?: {
+        nofollow: boolean;
+    }): MetaInfo;
+    setMetaInfo(m: {
+        lastUpdate: number;
+    }): this;
     size(): number;
     lastUpdate(): number;
     rm(options?: {
@@ -83,7 +108,9 @@ export declare class SFile {
         recursive?: boolean;
     }): this;
     exists(): boolean;
-    isDir(): boolean;
+    isDir({ nofollow }?: {
+        nofollow: boolean;
+    }): boolean;
     isDirPath(): boolean;
     path(): string;
     name(): string;
@@ -109,16 +136,16 @@ export declare class SFile {
     };
     each(callback: (file: SFile) => void, options?: DirectoryOptions): this;
     recursive(): Generator<SFile>;
-    recursive(options: DirectoryOptions): Generator<SFile>;
-    recursive(callback: FileCallback, options: DirectoryOptions): this;
+    recursive(options: ListFilesOptions): Generator<SFile>;
+    recursive(callback: FileCallback, options: ListFilesOptions): this;
     getDirTree(options?: GetDirTreeOptions): DirTree;
-    listFiles(options?: DirectoryOptions): SFile[];
+    listFiles(options?: ListFilesOptions): SFile[];
     ls(options?: DirectoryOptions): string[];
     fixSep(): this;
     mkdir(): this;
     prepareDir(): true | SFile;
     contains(file: SFile): boolean;
-    isLink(): string | null;
+    isLink(): string | undefined;
     link(to: SFile): void;
     resolveLink(): SFile;
     watch(listener: (eventType: string, file: SFile, meta: MetaInfo) => void): {

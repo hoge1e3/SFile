@@ -1,5 +1,4 @@
 
-import { DropArgument } from "node:net";
 import { default as Content } from "./Content.js";
 import {MIMETypes,defaultMIMETYpes} from "./MIMETypes.js";
 export { default as Content } from "./Content.js";
@@ -9,15 +8,21 @@ type DependencyContainer={
   Buffer: typeof Buffer,
   //process: typeof import("node:process"),
 }
+type BinTypeOption={binType:typeof Buffer|typeof ArrayBuffer};
 export type MetaInfo={
   lastUpdate:number,
   link?: string,
+  // if this is a link, indicates whether the destination is a directory
+  isDirPath?: boolean, // undefined=unknown, true=dir, false=regular file
+  stat?: typeof import("node:fs").Stats,  // if this is a link, the stats of the destination
+  lstat? :typeof import("node:fs").Stats, // if this is a link, the stats of the link itself
 };
 
 export type ExcludeFunction=(f:SFile)=>boolean;
 export type ExcludeHash={[key:string]: any};
 export type ExcludeOption=(ExcludeFunction | string[] | ExcludeHash);
 export type DirectoryOptions={excludes?: ExcludeOption, excludesF?:ExcludeFunction, includeDir?:boolean};
+export type ListFilesOptions=DirectoryOptions&{cacheMeta?:boolean};
 export type GetDirTreeExcludeFunction=(f:SFile, options:GetDirTreeExcludeFunctionArgs)=>boolean;
 export type GetDirStyle = "flat-absolute" | "flat-relative" | "hierarchical" | "no-recursive";
 export type GetDirTreeOptions={excludes?: ExcludeOption|GetDirTreeExcludeFunction , style:GetDirStyle, base?:SFile};
@@ -71,6 +76,27 @@ function truncSep(path:string) {
 function addSep(path:string){
   return truncSep(path)+"/";
 }
+export class Cache<T> {
+  private value:Partial<T>={};
+  public timestamp:number=0;
+  public set(v:Partial<T>) {
+    this.poke(v);
+    this.timestamp=Date.now();
+  }
+  public poke(v:Partial<T>) {
+    this.value=v;
+  }
+  public get(duration:number=0):Partial<T> {
+    return this.valid(duration) ? this.value :{};
+  }
+  public valid(duration:number=0) {
+    return this.timestamp>=0 && (duration==0 || Date.now()-this.timestamp<duration);
+  }
+}
+export type CachedInfo={
+  meta: MetaInfo,
+  content: Content;
+};
 export class SFile {
   static is(obj:any):obj is SFile {
     return obj instanceof SFile;
@@ -79,12 +105,10 @@ export class SFile {
   readonly _path:string;// Just debug info
   #fs:FileSystemFactory;
   #policy: Policy|undefined;
+  public cache = new Cache<CachedInfo>();
   constructor(__fs:FileSystemFactory, filePath:string, policy?: Policy) {
     this.#fs=__fs;
     this.#path = __fs._normalizePath(filePath); 
-    /*if (!this.isDirPath() && this.isDir()) {
-      this.#path+="/";
-    }*/
     this.#policy=policy;
     if (policy && !policy.topDir.contains(this)) {
       throw new Error(`Cannot create files outside ${policy.topDir}`);
@@ -165,8 +189,8 @@ export class SFile {
     }
     return b;
   }
-  getBytes({ binType }:{binType:(typeof Buffer|typeof ArrayBuffer)} = {binType:Buffer}) {
-    const {fs,path}=this.#fs.deps;
+  getBytes({ binType }:BinTypeOption={binType:Buffer}):Buffer|ArrayBuffer {
+    const {fs,path,Buffer}=this.#fs.deps;
     const buffer = fs.readFileSync(this.#path);
     return binType === ArrayBuffer ? Content.buffer2ArrayBuffer(buffer) : buffer;
   }
@@ -179,17 +203,32 @@ export class SFile {
     return this.setContent(Content.url(url));
   }
 
-  getMetaInfo():MetaInfo{
+  getMetaInfo({nofollow}={nofollow:false}):MetaInfo{
     const {fs,path}=this.#fs.deps;
-    const stats = fs.statSync(this.#path);
-    return {
-      lastUpdate: stats.mtimeMs,
-    };
+    if (nofollow) {
+      const cached=this.cache.get().meta;
+      if (cached) return cached;
+      const lstat = fs.lstatSync(this.#path);
+      return {
+        lastUpdate: lstat.mtimeMs,
+        link: lstat.isSymbolicLink() ? fs.readlinkSync(this.#path) : undefined,
+        lstat,
+      };
+    } else {
+      const stat = fs.statSync(this.#path);
+      return {
+        lastUpdate: stat.mtimeMs,
+        isDirPath: stat.isDirectory(),
+        // link is undefined because the link is resolved by statSync
+        stat,
+      };  
+    }
   }
-  setMetaInfo(m:MetaInfo) {
+  setMetaInfo(m:{lastUpdate:number}):this{
     const {fs,path}=this.#fs.deps;
     const stats = fs.statSync(this.#path);
     fs.utimesSync(this.#path, stats.atime, new Date(m.lastUpdate));
+    return this;
   }
   size(){
     const {fs,path}=this.#fs.deps;
@@ -222,9 +261,25 @@ export class SFile {
     return fs.existsSync(this.#path);
   }
 
-  isDir() {
+  isDir({nofollow}={nofollow:false}):boolean {
+    // nofollow: if true and this is a link, returns false.
     const {fs,path}=this.#fs.deps;
-    return this.exists() && fs.statSync(this.#path).isDirectory();
+    const cmeta=this.cache.get().meta;
+    if (cmeta) {
+      if (nofollow) {
+        if (cmeta.link) return false;
+        if (cmeta.isDirPath!==undefined) return cmeta.isDirPath;
+        if (cmeta.lstat) return cmeta.lstat.isDirectory();
+      } else {
+        if (cmeta.isDirPath!==undefined) return cmeta.isDirPath;
+        if (cmeta.stat) return cmeta.stat.isDirectory();
+      }
+    }
+    if (nofollow) {
+      return fs.lstatSync(this.#path).isDirectory();
+    } else {
+      return this.exists() && fs.statSync(this.#path).isDirectory();
+    }
   }
   isDirPath(){
     return this.#path.endsWith("/");
@@ -391,10 +446,10 @@ export class SFile {
     return this;
   }
   recursive():Generator<SFile>;
-  recursive(options:DirectoryOptions):Generator<SFile>;
-  recursive(callback:FileCallback, options:DirectoryOptions):this;
-  recursive(a1?:FileCallback|DirectoryOptions, a2?:DirectoryOptions) {
-    const options:DirectoryOptions=a2 ?? ((a1 && typeof a1==="object") ? a1 : {});
+  recursive(options:ListFilesOptions):Generator<SFile>;
+  recursive(callback:FileCallback, options:ListFilesOptions):this;
+  recursive(a1?:FileCallback|ListFilesOptions, a2?:ListFilesOptions) {
+    const options:ListFilesOptions=a2 ?? ((a1 && typeof a1==="object") ? a1 : {});
     const callback:FileCallback|undefined=(a1 && typeof a1==="function" ? a1 : undefined); 
     this.assertDir();
     if (callback) {
@@ -404,7 +459,7 @@ export class SFile {
       return this;
     } else {
       const includeDir=options.includeDir;
-      const {excludesF}=this.parseExcludeOption(options);
+      //const {excludesF}=this.parseExcludeOption(options);
       const self=this;
       return {
         *[Symbol.iterator](){
@@ -454,20 +509,20 @@ export class SFile {
         excludesFunc=defaultExcludes;
     }
     let base=options.base||this;
-    const files = this.listFiles(options);
+    const files = this.listFiles({...options, cacheMeta:true});
     if (options.style == "no-recursive") {
       for (let file of files) {
-        dest[file.name()] = this.getMetaInfo();
+        dest[file.name()] = file.getMetaInfo({nofollow:true});
       }
       return dest;
     }
     const newoption = {style: options.style, base};
     for (let file of files) {
-        const meta = file.getMetaInfo();
+        const meta = file.getMetaInfo({nofollow:true});
         const fullPath = file.path();
         const relPath = file.relPath(base);
         if (excludesFunc(file, {fullPath, relPath,  ...options})) continue;
-        if (file.isDir()) {
+        if (file.isDir({nofollow:true})) {
             switch (options.style) {
                 case "flat-absolute":
                 case "flat-relative":
@@ -495,9 +550,35 @@ export class SFile {
   }
 
 
-  listFiles(options?:DirectoryOptions) {
+  listFiles(options?:ListFilesOptions) {
     const {fs,path}=this.#fs.deps;
     const {excludesF}=this.parseExcludeOption(options);
+    if (options?.cacheMeta) {
+      if (!this.isDir({nofollow:true})) {
+        throw new Error(this+' is not a directory');
+      }
+      const res=[] as SFile[];
+      for (let dirent of fs.readdirSync(this.#path, {withFileTypes: true})) {
+        const file=this.rel(dirent.name);
+        if (excludesF(file)) continue;
+        const extra=(dirent as any).extra;
+        if (extra && extra.lastUpdate) {
+          file.cache.set({
+            meta: {
+              lastUpdate: extra.lastUpdate,
+              isDirPath: extra.isDirPath,
+              link: extra.link,
+            },  
+          });
+        } else {
+          file.cache.set({
+            meta: file.getMetaInfo({nofollow:true}),
+          });
+        }
+        res.push(file);
+      }
+      return res;
+    }
     if (!this.isDir()) {
       throw new Error(this+' is not a directory');
     }
@@ -528,10 +609,10 @@ export class SFile {
   contains(file:SFile) {
     return truncSep(file.path()).startsWith(truncSep(this.path()));
   }
-  isLink():string|null {
+  isLink():string|undefined {
     const {fs,path}=this.#fs.deps;
     const stat=fs.lstatSync(this.#path);
-    if(!stat.isSymbolicLink())return null;
+    if(!stat.isSymbolicLink())return undefined;
     return fs.realpathSync(this.#path);
   }
   link(to:SFile) {
