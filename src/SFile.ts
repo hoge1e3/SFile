@@ -14,8 +14,8 @@ export type MetaInfo={
   link?: string,
   // if this is a link, indicates whether the destination is a directory
   isDirPath?: boolean, // undefined=unknown, true=dir, false=regular file
-  stat?: typeof import("node:fs").Stats,  // if this is a link, the stats of the destination
-  lstat? :typeof import("node:fs").Stats, // if this is a link, the stats of the link itself
+  stat?: import("node:fs").Stats,  // if this is a link, the stats of the destination
+  lstat? :import("node:fs").Stats, // if this is a link, the stats of the link itself
 };
 
 export type ExcludeFunction=(f:SFile)=>boolean;
