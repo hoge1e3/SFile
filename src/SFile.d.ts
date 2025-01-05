@@ -64,6 +64,7 @@ export declare class Cache<T> {
     poke(v: Partial<T>): void;
     get(duration?: number): Partial<T>;
     valid(duration?: number): boolean;
+    clear(): void;
 }
 export type CachedInfo = {
     meta: MetaInfo;
@@ -91,7 +92,7 @@ export declare class SFile {
     bytes(b: Buffer): this;
     bytes(): Buffer;
     setBytes(b: ArrayBuffer | Buffer): ArrayBuffer | Buffer<ArrayBufferLike>;
-    getBytes({ binType }?: BinTypeOption): Buffer | ArrayBuffer;
+    getBytes(options?: BinTypeOption): Buffer | ArrayBuffer;
     dataURL(url: string): this;
     dataURL(): string;
     getMetaInfo({ nofollow }?: {
@@ -138,6 +139,14 @@ export declare class SFile {
     recursive(options: ListFilesOptions): Generator<SFile>;
     recursive(callback: FileCallback, options: ListFilesOptions): this;
     getDirTree(options?: GetDirTreeOptions): DirTree;
+    /**
+     *
+     * @param options cacheMeta:
+     *          If true, the metaInfo(result of .getMetaInfo()) of each file object is cached in the file object.
+     *          If false, the metaInfo is retrieved each time from the file system when .getMetaInfo is called.
+     *          true is more efficient but the metainfo is NOT changed even if the file is modified by other processes.
+     * @returns
+     */
     listFiles(options?: ListFilesOptions): SFile[];
     ls(options?: DirectoryOptions): string[];
     fixSep(): this;

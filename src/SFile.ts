@@ -92,6 +92,9 @@ export class Cache<T> {
   public valid(duration:number=0) {
     return this.timestamp>=0 && (duration==0 || Date.now()-this.timestamp<duration);
   }
+  public clear(){
+    this.value={};
+  }
 }
 export type CachedInfo={
   meta: MetaInfo,
@@ -189,8 +192,9 @@ export class SFile {
     }
     return b;
   }
-  getBytes({ binType }:BinTypeOption={binType:Buffer}):Buffer|ArrayBuffer {
+  getBytes(options?:BinTypeOption):Buffer|ArrayBuffer {
     const {fs,path,Buffer}=this.#fs.deps;
+    const binType=options?.binType||Buffer;
     const buffer = fs.readFileSync(this.#path);
     return binType === ArrayBuffer ? Content.buffer2ArrayBuffer(buffer) : buffer;
   }
@@ -320,8 +324,9 @@ export class SFile {
 
   relPath(base:SFile) {
     const {fs,path}=this.#fs.deps;
+    const body=path.relative(base.path(), this.#path).replace(/\\/g,"/");
     return (
-      path.relative(base.path(), this.#path).replace(/\\/g,"/")+(this.isDirPath()?"/":"")
+      body+(body.length && this.isDirPath()?"/":"")
     ).replace(/\/+$/,"/");
   }
 
@@ -549,7 +554,14 @@ export class SFile {
     return dest;
   }
 
-
+  /**
+   * 
+   * @param options cacheMeta: 
+   *          If true, the metaInfo(result of .getMetaInfo()) of each file object is cached in the file object. 
+   *          If false, the metaInfo is retrieved each time from the file system when .getMetaInfo is called.
+   *          true is more efficient but the metainfo is NOT changed even if the file is modified by other processes.
+   * @returns 
+   */
   listFiles(options?:ListFilesOptions) {
     const {fs,path}=this.#fs.deps;
     const {excludesF}=this.parseExcludeOption(options);
@@ -626,7 +638,7 @@ export class SFile {
   watch(listener:(eventType:string, file:SFile, meta:MetaInfo)=>void):{remove:()=>void};
   watch(options:any, listener:(eventType:string, file:SFile, meta:MetaInfo)=>void):{remove:()=>void};
   watch(_1?:any, _2?:any) {
-    let options={},listener:(eventType:string, file:SFile, meta:MetaInfo)=>void=function(){};
+    let options={},listener:(eventType:string, file:SFile, meta:MetaInfo|undefined)=>void=function(){};
     if (typeof _1==="object") options=_1;
     if (typeof _2==="object") options=_2;
     if (typeof _1==="function") listener=_1;
@@ -638,7 +650,7 @@ export class SFile {
           this.clone(filename) : 
           this.rel(filename)
       ):this;
-      listener(eventType, file, file.getMetaInfo());
+      listener(eventType, file,  file.exists() ? file.getMetaInfo() : undefined);
     });
     return {
       remove:()=>{
