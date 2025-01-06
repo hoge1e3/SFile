@@ -23,6 +23,7 @@ export type ExcludeHash={[key:string]: any};
 export type ExcludeOption=(ExcludeFunction | string[] | ExcludeHash);
 export type DirectoryOptions={excludes?: ExcludeOption, excludesF?:ExcludeFunction, includeDir?:boolean};
 export type ListFilesOptions=DirectoryOptions&{cacheMeta?:boolean};
+export type RecursiveOptions=ListFilesOptions&{followlink?:boolean};
 export type GetDirTreeExcludeFunction=(f:SFile, options:GetDirTreeExcludeFunctionArgs)=>boolean;
 export type GetDirStyle = "flat-absolute" | "flat-relative" | "hierarchical" | "no-recursive";
 export type GetDirTreeOptions={excludes?: ExcludeOption|GetDirTreeExcludeFunction , style:GetDirStyle, base?:SFile};
@@ -247,7 +248,7 @@ export class SFile {
   }
   rm(options:{r?:boolean, recursive?:boolean} = {}) {
     const {fs,path}=this.#fs.deps;
-    if (this.isDir()) {
+    if (this.isDir({nofollow:true})) {
       if (options.r || options.recursive) {
         fs.rmSync(this.#path, { recursive: true, force: true });
       } else {
@@ -262,6 +263,9 @@ export class SFile {
 
   exists() {
     const {fs,path}=this.#fs.deps;
+    if (this.cache.get().meta) {
+      return true;
+    }
     return fs.existsSync(this.#path);
   }
 
@@ -278,11 +282,13 @@ export class SFile {
         if (cmeta.isDirPath!==undefined) return cmeta.isDirPath;
         if (cmeta.stat) return cmeta.stat.isDirectory();
       }
+    } else {
+      if (!this.exists()) return false;
     }
     if (nofollow) {
       return fs.lstatSync(this.#path).isDirectory();
     } else {
-      return this.exists() && fs.statSync(this.#path).isDirectory();
+      return fs.statSync(this.#path).isDirectory();
     }
   }
   isDirPath(){
@@ -341,10 +347,22 @@ export class SFile {
     return src.copyTo(this);
   }
   toString(){return this.#path;}
-  copyTo(dst:SFile, options={}):SFile{
-    const src=this;
-    const srcIsDir=src.isDir();
-    let dstIsDir=dst.isDir();
+  /**
+   * src.copyTo(dst) is equivalent to cp src/* dst/* , not cp src dst
+   * @param dst 
+   * @param options 
+   * @returns 
+   */
+  copyTo(dst:SFile, options={followlink:false as boolean}):SFile{
+    let src:SFile=this;
+    const followlink=options.followlink;
+    if (followlink) {
+      src=src.resolveLink();
+      dst=dst.resolveLink();
+    }
+    const nofollow=!followlink;
+    const srcIsDir=src.isDir({nofollow});
+    let dstIsDir=dst.isDir({nofollow});
     if (!srcIsDir && dstIsDir) {
       dst=dst.rel(src.name());
       dst.assertRegularFile();
@@ -353,12 +371,14 @@ export class SFile {
     if (srcIsDir && !dstIsDir) {
       throw new Error("Cannot move dir "+src.path()+" to file "+dst.path());
     } else if (!srcIsDir && !dstIsDir) {
+      if (src.isLink()) src=src.resolveLink();
+      if (dst.isLink()) dst=dst.resolveLink();
       const c=src.getContent();
       dst.setContent(c);
     } else {
       if (!srcIsDir || !dstIsDir) throw new Error(src+" to "+dst+" should both dirs");
-      for (let e of src.listFiles()) {
-        e.copyTo(dst.rel(e.relPath(src)));
+      for (let e of src.listFiles({cacheMeta:true})) {
+        e.copyTo(dst.rel(e.relPath(src)),options);
       }
     }
     return dst;
@@ -402,13 +422,13 @@ export class SFile {
     }
     return this;
   }
-  assertDir() {
-    if (!this.isDir()) {
+  assertDir(options={nofollow:false as boolean}) {
+    if (!this.isDir(options)) {
       throw new Error(`${this.path()} is not a directory`);
     }
   }
-  assertRegularFile() {
-    if (this.isDir()) {
+  assertRegularFile(options={nofollow:false as boolean}) {
+    if (this.isDir(options)) {
       throw new Error(`${this.path()} is a directory`);
     }
   }
@@ -566,6 +586,7 @@ export class SFile {
     const {fs,path}=this.#fs.deps;
     const {excludesF}=this.parseExcludeOption(options);
     if (options?.cacheMeta) {
+      // cacheMeta implicitly sets nofollow: true
       if (!this.isDir({nofollow:true})) {
         throw new Error(this+' is not a directory');
       }
@@ -623,6 +644,7 @@ export class SFile {
   }
   isLink():string|undefined {
     const {fs,path}=this.#fs.deps;
+    if (!this.exists()) return undefined;
     const stat=fs.lstatSync(this.#path);
     if(!stat.isSymbolicLink())return undefined;
     return fs.realpathSync(this.#path);

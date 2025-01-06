@@ -29,6 +29,9 @@ export type DirectoryOptions = {
 export type ListFilesOptions = DirectoryOptions & {
     cacheMeta?: boolean;
 };
+export type RecursiveOptions = ListFilesOptions & {
+    followlink?: boolean;
+};
 export type GetDirTreeExcludeFunction = (f: SFile, options: GetDirTreeExcludeFunctionArgs) => boolean;
 export type GetDirStyle = "flat-absolute" | "flat-relative" | "hierarchical" | "no-recursive";
 export type GetDirTreeOptions = {
@@ -122,15 +125,27 @@ export declare class SFile {
     rel(relPath: string): SFile;
     copyFrom(src: SFile): SFile;
     toString(): string;
-    copyTo(dst: SFile, options?: {}): SFile;
+    /**
+     * src.copyTo(dst) is equivalent to cp src/* dst/* , not cp src dst
+     * @param dst
+     * @param options
+     * @returns
+     */
+    copyTo(dst: SFile, options?: {
+        followlink: boolean;
+    }): SFile;
     moveFrom(src: SFile): SFile;
     moveTo(dst: SFile): SFile;
     contentType(): string;
     isText(): RegExpMatchArray | null;
     getContent(): Content;
     setContent(c: Content): this;
-    assertDir(): void;
-    assertRegularFile(): void;
+    assertDir(options?: {
+        nofollow: boolean;
+    }): void;
+    assertRegularFile(options?: {
+        nofollow: boolean;
+    }): void;
     parseExcludeOption(options?: DirectoryOptions): {
         excludesF: ExcludeFunction;
     };
