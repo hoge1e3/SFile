@@ -151,8 +151,8 @@ export declare class SFile {
     };
     each(callback: (file: SFile) => void, options?: DirectoryOptions): this;
     recursive(): Generator<SFile>;
-    recursive(options: ListFilesOptions): Generator<SFile>;
-    recursive(callback: FileCallback, options: ListFilesOptions): this;
+    recursive(options: RecursiveOptions): Generator<SFile>;
+    recursive(callback: FileCallback, options: RecursiveOptions): this;
     getDirTree(options?: GetDirTreeOptions): DirTree;
     /**
      *

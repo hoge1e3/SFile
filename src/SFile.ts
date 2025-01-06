@@ -471,10 +471,10 @@ export class SFile {
     return this;
   }
   recursive():Generator<SFile>;
-  recursive(options:ListFilesOptions):Generator<SFile>;
-  recursive(callback:FileCallback, options:ListFilesOptions):this;
-  recursive(a1?:FileCallback|ListFilesOptions, a2?:ListFilesOptions) {
-    const options:ListFilesOptions=a2 ?? ((a1 && typeof a1==="object") ? a1 : {});
+  recursive(options:RecursiveOptions):Generator<SFile>;
+  recursive(callback:FileCallback, options:RecursiveOptions):this;
+  recursive(a1?:FileCallback|RecursiveOptions, a2?:RecursiveOptions) {
+    const options:RecursiveOptions=a2 ?? ((a1 && typeof a1==="object") ? a1 : {});
     const callback:FileCallback|undefined=(a1 && typeof a1==="function" ? a1 : undefined); 
     this.assertDir();
     if (callback) {
@@ -494,7 +494,13 @@ export class SFile {
               yield dir;
             }
             for (const file of dir.listFiles(options)) {
-              if (file.isDir()) {
+              if (file.isLink()){
+                const r=file.resolveLink();
+                const isd=r.isDir({nofollow:true});
+                if (options.followlink && isd) {
+                  yield* walk(r);
+                } else if (!isd || includeDir) yield r;
+              } else if (file.isDir({nofollow:true})) {
                 yield* walk(file);
               } else {
                 yield file;
