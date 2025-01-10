@@ -13,8 +13,8 @@ const assert = Object.assign(
                 throw e;
             }
         }) as T;
-    }
-    //deepStrictEqual: _assert.deepStrictEqual,
+    },
+    deepStrictEqual: _assert.deepStrictEqual,
 });
 
 const _console={
@@ -226,7 +226,7 @@ try {
         _console.log("BLOB read done!", f.name(), tmp.name());
         tmp.rm();
         f.rm();
-        
+        await moveTest(testd);
         //setTimeout(function () {location.reload();},10000);
         await asyncTest(testd);
 
@@ -238,6 +238,9 @@ try {
             testd = cd = FS.get(testf.text());
             assert(cd.exists());
             _console.log("Enter", cd);
+            const tmp2=testd.rel("tmp2");
+            assert(tmp2.exists());
+            tmp2.rm({r:true});
             assert(testd.rel("test.txt").text() === ABCD);
             assert(testd.rel("sub/").exists());
             assert(testd.rel("sub/test2.txt").text() === romd.rel("Actor.tonyu").text());
@@ -292,6 +295,26 @@ try {
         _console.error(e);
     }
     console.log("Unknown tags:", JSON.stringify(_console.unknownlist,null,2))
+}
+async function moveTest(testd:SFile) {
+    let tmp1 = testd.rel("tmp1");
+    tmp1.mkdir();
+    let tmp2 = testd.rel("tmp2");
+    //tmp2.mkdir();
+    let sub = testd.rel("sub");
+    let res1=[];
+    for (let f of sub.recursive()) {
+        res1.push(f.relPath(sub));
+    }
+    sub.copyTo(tmp1);
+    tmp1.moveTo(tmp2);
+    assert(!tmp1.exists());
+    let res2=[];
+    for (let f of tmp2.recursive()) {
+        res2.push(f.relPath(tmp2));
+    }
+    console.log("movetes",res1,res2);
+    _assert.deepStrictEqual(res1,res2);
 }
 /*
 async function chkBigFile(testd: SFile) {

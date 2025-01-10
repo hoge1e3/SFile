@@ -126,7 +126,7 @@ export declare class SFile {
     copyFrom(src: SFile): SFile;
     toString(): string;
     /**
-     * src.copyTo(dst) is equivalent to cp src/* dst/* , not cp src dst
+     * src.copyTo(dst) is equivalent to cp -r src/* dst/ , not cp -r src dst
      * @param dst
      * @param options
      * @returns

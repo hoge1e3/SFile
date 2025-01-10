@@ -348,7 +348,7 @@ export class SFile {
   }
   toString(){return this.#path;}
   /**
-   * src.copyTo(dst) is equivalent to cp src/* dst/* , not cp src dst
+   * src.copyTo(dst) is equivalent to cp -r src/* dst/ , not cp -r src dst
    * @param dst 
    * @param options 
    * @returns 
@@ -389,8 +389,13 @@ export class SFile {
   }
 
   moveTo(dst:SFile) {
-    this.copyTo(dst);
-    this.rm();
+    /*if (dst.exists()) {
+      throw new Error(`${dst.path()} already exists`);
+    }*/
+    const {fs,path}=this.#fs.deps;
+    fs.renameSync(this.#path, dst.#path);
+    /*this.copyTo(dst);
+    this.rm({recursive:true});*/
     return dst;
   }
   contentType() {
