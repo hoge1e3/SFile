@@ -9,13 +9,14 @@ type DependencyContainer={
   //process: typeof import("node:process"),
 }
 type BinTypeOption={binType:typeof Buffer|typeof ArrayBuffer};
+type Stats=import("node:fs").Stats;
 export type MetaInfo={
   lastUpdate:number,
   link?: string,
   // if this is a link, indicates whether the destination is a directory
-  isDirPath?: boolean, // undefined=unknown, true=dir, false=regular file
-  stat?: import("node:fs").Stats,  // if this is a link, the stats of the destination
-  lstat? :import("node:fs").Stats, // if this is a link, the stats of the link itself
+  //isDirPath?: boolean, // undefined=unknown, true=dir, false=regular file
+  //stat?: Stats,  // if this is a link, the stats of the destination
+  //lstat?: Stats, // if this is a link, the stats of the link itself
 };
 
 export type ExcludeFunction=(f:SFile)=>boolean;
@@ -98,7 +99,8 @@ export class Cache<T> {
   }
 }
 export type CachedInfo={
-  meta: MetaInfo,
+  //meta: MetaInfo,
+  lstat: Stats,
   content: Content;
 };
 export class SFile {
@@ -207,25 +209,29 @@ export class SFile {
     }
     return this.setContent(Content.url(url));
   }
-
+  stat():Stats {
+    const {fs,path}=this.#fs.deps;
+    return fs.statSync(this.#path);
+  }
+  lstat():Stats {
+    const {fs,path}=this.#fs.deps;
+    const cached=this.cache.get().lstat;
+    if (cached) return cached;
+    return fs.lstatSync(this.#path);
+  }
   getMetaInfo({nofollow}={nofollow:false}):MetaInfo{
     const {fs,path}=this.#fs.deps;
     if (nofollow) {
-      const cached=this.cache.get().meta;
-      if (cached) return cached;
-      const lstat = fs.lstatSync(this.#path);
+      const lstat = this.lstat();
       return {
         lastUpdate: lstat.mtimeMs,
         link: lstat.isSymbolicLink() ? fs.readlinkSync(this.#path) : undefined,
-        lstat,
       };
     } else {
-      const stat = fs.statSync(this.#path);
+      const stat = this.stat();
       return {
         lastUpdate: stat.mtimeMs,
-        isDirPath: stat.isDirectory(),
         // link is undefined because the link is resolved by statSync
-        stat,
       };  
     }
   }
@@ -263,7 +269,7 @@ export class SFile {
 
   exists() {
     const {fs,path}=this.#fs.deps;
-    if (this.cache.get().meta) {
+    if (this.cache.get().lstat) {
       return true;
     }
     return fs.existsSync(this.#path);
@@ -272,19 +278,11 @@ export class SFile {
   isDir({nofollow}={nofollow:false}):boolean {
     // nofollow: if true and this is a link, returns false.
     const {fs,path}=this.#fs.deps;
-    const cmeta=this.cache.get().meta;
-    if (cmeta) {
-      if (nofollow) {
-        if (cmeta.link) return false;
-        if (cmeta.isDirPath!==undefined) return cmeta.isDirPath;
-        if (cmeta.lstat) return cmeta.lstat.isDirectory();
-      } else {
-        if (cmeta.isDirPath!==undefined) return cmeta.isDirPath;
-        if (cmeta.stat) return cmeta.stat.isDirectory();
-      }
-    } else {
-      if (!this.exists()) return false;
+    if (nofollow) {
+      const lstat=this.cache.get().lstat;
+      if (lstat) return lstat.isDirectory();
     }
+    if (!this.exists()) return false;
     if (nofollow) {
       return fs.lstatSync(this.#path).isDirectory();
     } else {
@@ -606,17 +604,13 @@ export class SFile {
         const file=this.rel(dirent.name);
         if (excludesF(file)) continue;
         const extra=(dirent as any).extra;
-        if (extra && extra.lastUpdate) {
+        if (extra && extra.lstat) {
           file.cache.set({
-            meta: {
-              lastUpdate: extra.lastUpdate,
-              isDirPath: extra.isDirPath,
-              link: extra.link,
-            },  
+            lstat:extra.lstat
           });
         } else {
           file.cache.set({
-            meta: file.getMetaInfo({nofollow:true}),
+            lstat: file.lstat(),
           });
         }
         res.push(file);

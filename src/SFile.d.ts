@@ -9,12 +9,10 @@ type DependencyContainer = {
 type BinTypeOption = {
     binType: typeof Buffer | typeof ArrayBuffer;
 };
+type Stats = import("node:fs").Stats;
 export type MetaInfo = {
     lastUpdate: number;
     link?: string;
-    isDirPath?: boolean;
-    stat?: import("node:fs").Stats;
-    lstat?: import("node:fs").Stats;
 };
 export type ExcludeFunction = (f: SFile) => boolean;
 export type ExcludeHash = {
@@ -70,7 +68,7 @@ export declare class Cache<T> {
     clear(): void;
 }
 export type CachedInfo = {
-    meta: MetaInfo;
+    lstat: Stats;
     content: Content;
 };
 export declare class SFile {
@@ -98,6 +96,8 @@ export declare class SFile {
     getBytes(options?: BinTypeOption): Buffer | ArrayBuffer;
     dataURL(url: string): this;
     dataURL(): string;
+    stat(): Stats;
+    lstat(): Stats;
     getMetaInfo({ nofollow }?: {
         nofollow: boolean;
     }): MetaInfo;
