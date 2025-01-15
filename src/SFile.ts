@@ -297,6 +297,13 @@ export class SFile {
   path() {
     return this.#path;
   }
+  equals(s:string|SFile):boolean{
+    if (typeof s=="string") {
+      return this.path()===s;
+    } else {
+      return this.path()===s.path();
+    }
+  }
 
   name() {
     const {fs,path}=this.#fs.deps;
@@ -325,6 +332,23 @@ export class SFile {
   sibling(name:string) {
     return this.up().rel(name);
   }
+  closest(name:string|((f:SFile)=>any)):SFile|undefined {
+    if (typeof name==="string"){
+      return this.closest((f:SFile)=>f.name()===name);
+    } else {
+      const f=(f:SFile):SFile|undefined=>{
+        const res=name(f);
+        if (SFile.is(res))return res;
+        if (res) return f;
+        return undefined;
+      }
+      for(let p:SFile=this;p;p=p.up()) {
+        const r=f(p);
+        if (r) return r;
+      }
+      return undefined;
+    }
+  }
 
   relPath(base:SFile) {
     const {fs,path}=this.#fs.deps;
@@ -338,6 +362,9 @@ export class SFile {
     const {fs,path}=this.#fs.deps;
     if(path.isAbsolute(relPath)) throw new Error(`rel: ${relPath} should be relative`);
     return this.clone(path.join(this.#path, relPath));
+  }
+  _directorify() {
+    if (!this.isDirPath()) this.#path+="/";
   }
 
   // Copy and move methods
@@ -591,10 +618,10 @@ export class SFile {
    *          true is more efficient but the metainfo is NOT changed even if the file is modified by other processes.
    * @returns 
    */
-  listFiles(options?:ListFilesOptions) {
+  listFiles(options:ListFilesOptions={cacheMeta:true}) {
     const {fs,path}=this.#fs.deps;
     const {excludesF}=this.parseExcludeOption(options);
-    if (options?.cacheMeta) {
+    if (options.cacheMeta) {
       // cacheMeta implicitly sets nofollow: true
       if (!this.isDir({nofollow:true})) {
         throw new Error(this+' is not a directory');
@@ -604,16 +631,12 @@ export class SFile {
         const file=this.rel(dirent.name);
         if (excludesF(file)) continue;
         const extra=(dirent as any).extra;
-        if (extra && extra.lstat) {
-          file.cache.set({
-            lstat:extra.lstat
-          });
-        } else {
-          file.cache.set({
-            lstat: file.lstat(),
-          });
+        const lstat=(extra && extra.lstat? extra.lstat : file.lstat()) as Stats;
+        file.cache.set({lstat});
+        if (lstat.isDirectory()) {
+          file._directorify();
         }
-        res.push(file);
+        res.push(file);      
       }
       return res;
     }
