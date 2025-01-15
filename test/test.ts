@@ -124,6 +124,7 @@ try {
         testd.rel("test.txt").text(ABCD);
         assert(romd.rel("Actor.tonyu").text().length > 0);
         testd.rel("sub/test2.txt").text(romd.rel("Actor.tonyu").text());
+        listFilesTest(romd);
         let tncnt:string[] = [];
         const pushtn=(f:SFile)=>tncnt.push(f.relPath(romd));
         romd.recursive(pushtn, { 
@@ -315,6 +316,15 @@ async function moveTest(testd:SFile) {
     }
     console.log("movetes",res1,res2);
     _assert.deepStrictEqual(res1,res2);
+}
+function listFilesTest(romd: SFile) {
+    eqa(romd.listFiles().map(f=>f.name()), [
+        "event/","graphics/","js/",
+        "physics/", "sound/","t1/","thread/", "ui/",
+        ".desktop", "Actor.tonyu", "BaseActor.tonyu",
+        "Boot.tonyu", "MathMod.tonyu", "NoviceActor.tonyu",
+        "options.json", "TObject.tonyu", "TQuery.tonyu"
+    ]);
 }
 /*
 async function chkBigFile(testd: SFile) {
