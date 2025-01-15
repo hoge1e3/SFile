@@ -159,6 +159,7 @@ export class SFile {
     const {fs,path}=this.#fs.deps;
     this.prepareDir();
     fs.appendFileSync(this.#path, str);
+    this.cache.clear();
   }
   getBlob():Blob {
     return new Blob([this.bytes()],{type:this.contentType()});
