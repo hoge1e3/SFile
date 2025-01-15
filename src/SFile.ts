@@ -23,7 +23,7 @@ export type ExcludeFunction=(f:SFile)=>boolean;
 export type ExcludeHash={[key:string]: any};
 export type ExcludeOption=(ExcludeFunction | string[] | ExcludeHash);
 export type DirectoryOptions={excludes?: ExcludeOption, excludesF?:ExcludeFunction, includeDir?:boolean};
-export type ListFilesOptions=DirectoryOptions&{cacheMeta?:boolean};
+export type ListFilesOptions=DirectoryOptions&{cacheMeta?:number|boolean};
 export type RecursiveOptions=ListFilesOptions&{followlink?:boolean};
 export type GetDirTreeExcludeFunction=(f:SFile, options:GetDirTreeExcludeFunctionArgs)=>boolean;
 export type GetDirStyle = "flat-absolute" | "flat-relative" | "hierarchical" | "no-recursive";
@@ -81,6 +81,7 @@ function addSep(path:string){
 export class Cache<T> {
   private value:Partial<T>={};
   public timestamp:number=0;
+  constructor(public duration:number=1000){}
   public set(v:Partial<T>) {
     this.poke(v);
     this.timestamp=Date.now();
@@ -88,15 +89,16 @@ export class Cache<T> {
   public poke(v:Partial<T>) {
     this.value=v;
   }
-  public get(duration:number=0):Partial<T> {
-    return this.valid(duration) ? this.value :{};
+  public get():Partial<T> {
+    return this.valid() ? this.value :{};
   }
-  public valid(duration:number=0) {
-    return this.timestamp>=0 && (duration==0 || Date.now()-this.timestamp<duration);
+  public valid() {
+    return ( this.timestamp>=0 && (this.duration==0 || Date.now()-this.timestamp<this.duration) );
   }
   public clear(){
     this.value={};
   }
+  public setDuration(d:number){this.duration=d;}
 }
 export type CachedInfo={
   //meta: MetaInfo,
@@ -150,6 +152,7 @@ export class SFile {
     const {fs,path}=this.#fs.deps;
     this.prepareDir();
     fs.writeFileSync(this.#path, str, 'utf8');
+    this.cache.clear();
     return this;
   }
   appendText(str:string) {
@@ -193,6 +196,7 @@ export class SFile {
     } else {
       fs.writeFileSync(this.#path, b);
     }
+    this.cache.clear();
     return b;
   }
   getBytes(options?:BinTypeOption):Buffer|ArrayBuffer {
@@ -239,6 +243,7 @@ export class SFile {
     const {fs,path}=this.#fs.deps;
     const stats = fs.statSync(this.#path);
     fs.utimesSync(this.#path, stats.atime, new Date(m.lastUpdate));
+    this.cache.clear();
     return this;
   }
   size(){
@@ -263,6 +268,7 @@ export class SFile {
     } else {
       fs.unlinkSync(this.#path);
     }
+    this.cache.clear();
     return this;
   }
   
@@ -402,10 +408,11 @@ export class SFile {
       dst.setContent(c);
     } else {
       if (!srcIsDir || !dstIsDir) throw new Error(src+" to "+dst+" should both dirs");
-      for (let e of src.listFiles({cacheMeta:true})) {
+      for (let e of src.listFiles({cacheMeta:1000})) {
         e.copyTo(dst.rel(e.relPath(src)),options);
       }
     }
+    dst.cache.clear();
     return dst;
   }
 
@@ -419,6 +426,7 @@ export class SFile {
     }*/
     const {fs,path}=this.#fs.deps;
     fs.renameSync(this.#path, dst.#path);
+    this.cache.clear();
     /*this.copyTo(dst);
     this.rm({recursive:true});*/
     return dst;
@@ -450,7 +458,19 @@ export class SFile {
     } else{
       fs.writeFileSync(this.#path, c.toBin(Buffer));
     }
+    this.cache.clear();
     return this;
+  }
+  appendContent(c:Content):this {
+    const {fs,path,Buffer}=this.#fs.deps;
+    this.prepareDir();
+    if (c.hasPlainText()) {
+      fs.appendFileSync(this.#path, c.toPlainText());
+    } else{
+      fs.appendFileSync(this.#path, c.toBin(Buffer));
+    }
+    this.cache.clear();
+    return this;    
   }
   assertDir(options={nofollow:false as boolean}) {
     if (!this.isDir(options)) {
@@ -618,10 +638,10 @@ export class SFile {
    *          true is more efficient but the metainfo is NOT changed even if the file is modified by other processes.
    * @returns 
    */
-  listFiles(options:ListFilesOptions={cacheMeta:true}) {
+  listFiles(options:ListFilesOptions={cacheMeta:1000}) {
     const {fs,path}=this.#fs.deps;
     const {excludesF}=this.parseExcludeOption(options);
-    if (options.cacheMeta) {
+    if (options.cacheMeta || options.cacheMeta===0) {
       // cacheMeta implicitly sets nofollow: true
       if (!this.isDir({nofollow:true})) {
         throw new Error(this+' is not a directory');
@@ -633,6 +653,7 @@ export class SFile {
         const extra=(dirent as any).extra;
         const lstat=(extra && extra.lstat? extra.lstat : file.lstat()) as Stats;
         file.cache.set({lstat});
+        file.cache.setDuration(typeof options.cacheMeta==="boolean"?0:options.cacheMeta);
         if (lstat.isDirectory()) {
           file._directorify();
         }
@@ -661,6 +682,7 @@ export class SFile {
   mkdir() {
     const {fs,path}=this.#fs.deps;
     fs.mkdirSync(this.#path, { recursive: true });
+    this.cache.clear();
     return this;
   }
   prepareDir(){
@@ -680,6 +702,7 @@ export class SFile {
   link(to:SFile) {
     const {fs,path}=this.#fs.deps;
     fs.symlinkSync(to.path(), this.#path, "junction");
+    this.cache.clear();
   }
   resolveLink() {
     const {fs,path}=this.#fs.deps;

@@ -25,7 +25,7 @@ export type DirectoryOptions = {
     includeDir?: boolean;
 };
 export type ListFilesOptions = DirectoryOptions & {
-    cacheMeta?: boolean;
+    cacheMeta?: number | boolean;
 };
 export type RecursiveOptions = ListFilesOptions & {
     followlink?: boolean;
@@ -59,13 +59,16 @@ export type DirTree = {
     [key: string]: MetaInfo | DirTree;
 };
 export declare class Cache<T> {
+    duration: number;
     private value;
     timestamp: number;
+    constructor(duration?: number);
     set(v: Partial<T>): void;
     poke(v: Partial<T>): void;
-    get(duration?: number): Partial<T>;
-    valid(duration?: number): boolean;
+    get(): Partial<T>;
+    valid(): boolean;
     clear(): void;
+    setDuration(d: number): void;
 }
 export type CachedInfo = {
     lstat: Stats;
@@ -116,13 +119,16 @@ export declare class SFile {
     }): boolean;
     isDirPath(): boolean;
     path(): string;
+    equals(s: string | SFile): boolean;
     name(): string;
     ext(): string;
     truncExt(e: string): string;
     up(): SFile;
     sibling(name: string): SFile;
+    closest(name: string | ((f: SFile) => any)): SFile | undefined;
     relPath(base: SFile): string;
     rel(relPath: string): SFile;
+    _directorify(): void;
     copyFrom(src: SFile): SFile;
     toString(): string;
     /**
@@ -140,6 +146,7 @@ export declare class SFile {
     isText(): RegExpMatchArray | null;
     getContent(): Content;
     setContent(c: Content): this;
+    appendContent(c: Content): this;
     assertDir(options?: {
         nofollow: boolean;
     }): void;
