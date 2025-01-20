@@ -23,7 +23,7 @@ export type ExcludeFunction=(f:SFile)=>boolean;
 export type ExcludeHash={[key:string]: any};
 export type ExcludeOption=(ExcludeFunction | string[] | ExcludeHash);
 export type DirectoryOptions={excludes?: ExcludeOption, excludesF?:ExcludeFunction, includeDir?:boolean};
-export type ListFilesOptions=DirectoryOptions&{cacheMeta?:number|boolean};
+export type ListFilesOptions=DirectoryOptions&{cache?:number|boolean};
 export type RecursiveOptions=ListFilesOptions&{followlink?:boolean};
 export type GetDirTreeExcludeFunction=(f:SFile, options:GetDirTreeExcludeFunctionArgs)=>boolean;
 export type GetDirStyle = "flat-absolute" | "flat-relative" | "hierarchical" | "no-recursive";
@@ -242,21 +242,20 @@ export class SFile {
   }
   setMetaInfo(m:{lastUpdate:number}):this{
     const {fs,path}=this.#fs.deps;
-    const stats = fs.statSync(this.#path);
+    const stats = this.stat();
     fs.utimesSync(this.#path, stats.atime, new Date(m.lastUpdate));
     this.cache.clear();
     return this;
   }
   size(){
-    const {fs,path}=this.#fs.deps;
-    const stats = fs.statSync(this.#path);
+    const stats = this.stat();
     return stats.size;
   }
   // File metadata and operations
   lastUpdate():number {
-    const {fs,path}=this.#fs.deps;
-    const stats = fs.statSync(this.#path);
-    return stats.mtimeMs;
+    // Spec change: use lstat not stat
+    const lstat = this.lstat();
+    return lstat.mtimeMs;
   }
   rm(options:{r?:boolean, recursive?:boolean} = {}) {
     const {fs,path}=this.#fs.deps;
@@ -284,16 +283,15 @@ export class SFile {
 
   isDir({nofollow}={nofollow:false}):boolean {
     // nofollow: if true and this is a link, returns false.
-    const {fs,path}=this.#fs.deps;
     if (nofollow) {
       const lstat=this.cache.get().lstat;
       if (lstat) return lstat.isDirectory();
     }
     if (!this.exists()) return false;
     if (nofollow) {
-      return fs.lstatSync(this.#path).isDirectory();
+      return this.lstat().isDirectory();
     } else {
-      return fs.statSync(this.#path).isDirectory();
+      return this.stat().isDirectory();
     }
   }
   isDirPath(){
@@ -333,11 +331,18 @@ export class SFile {
   // Relative and navigation methods
   up() {
     const {fs,path}=this.#fs.deps;
-    return this.clone(path.dirname(this.#path));
+    if (this.#path==="/" || this.#path==="\\") {
+      return null;
+    }
+    const dirn=path.dirname(this.#path);
+    if (dirn===this.#path) return null;
+    return this.clone(dirn);
   }
-
+  parent(){return this.up();}
   sibling(name:string) {
-    return this.up().rel(name);
+    const p=this.up();
+    if (!p) throw new Error(`Cannot get sibling of '/'`);
+    return p.rel(name);
   }
   closest(name:string|((f:SFile)=>any)):SFile|undefined {
     if (typeof name==="string"){
@@ -349,7 +354,7 @@ export class SFile {
         if (res) return f;
         return undefined;
       }
-      for(let p:SFile=this;p;p=p.up()) {
+      for(let p:SFile|null=this;p;p=p.up()) {
         const r=f(p);
         if (r) return r;
       }
@@ -409,7 +414,7 @@ export class SFile {
       dst.setContent(c);
     } else {
       if (!srcIsDir || !dstIsDir) throw new Error(src+" to "+dst+" should both dirs");
-      for (let e of src.listFiles({cacheMeta:1000})) {
+      for (let e of src.listFiles({cache:1000})) {
         e.copyTo(dst.rel(e.relPath(src)),options);
       }
     }
@@ -591,7 +596,7 @@ export class SFile {
         excludesFunc=defaultExcludes;
     }
     let base=options.base||this;
-    const files = this.listFiles({...options, cacheMeta:true});
+    const files = this.listFiles({...options, cache:true});
     if (options.style == "no-recursive") {
       for (let file of files) {
         dest[file.name()] = file.getMetaInfo({nofollow:true});
@@ -633,17 +638,18 @@ export class SFile {
 
   /**
    * 
-   * @param options cacheMeta: 
+   * @param options cache: 
    *          If true, the metaInfo(result of .getMetaInfo()) of each file object is cached in the file object. 
    *          If false, the metaInfo is retrieved each time from the file system when .getMetaInfo is called.
    *          true is more efficient but the metainfo is NOT changed even if the file is modified by other processes.
+   *          If number is specified, the cached info kept within duration in ms
    * @returns 
    */
-  listFiles(options:ListFilesOptions={cacheMeta:1000}) {
+  listFiles(options:ListFilesOptions={cache:1000}) {
     const {fs,path}=this.#fs.deps;
     const {excludesF}=this.parseExcludeOption(options);
-    if (options.cacheMeta || options.cacheMeta===0) {
-      // cacheMeta implicitly sets nofollow: true
+    if (options.cache || options.cache===0) {
+      // cache implicitly sets nofollow: true
       if (!this.isDir({nofollow:true})) {
         throw new Error(this+' is not a directory');
       }
@@ -654,7 +660,7 @@ export class SFile {
         const extra=(dirent as any).extra;
         const lstat=(extra && extra.lstat? extra.lstat : file.lstat()) as Stats;
         file.cache.set({lstat});
-        file.cache.setDuration(typeof options.cacheMeta==="boolean"?0:options.cacheMeta);
+        file.cache.setDuration(typeof options.cache==="boolean"?0:options.cache);
         if (lstat.isDirectory()) {
           file._directorify();
         }
@@ -688,6 +694,7 @@ export class SFile {
   }
   prepareDir(){
     const p=this.up();
+    if (!p) throw new Error(`Cannot prepare dir for '/'`);
     return p.exists() || p.mkdir();
   }
   contains(file:SFile) {

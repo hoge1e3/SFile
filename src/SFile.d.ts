@@ -25,7 +25,7 @@ export type DirectoryOptions = {
     includeDir?: boolean;
 };
 export type ListFilesOptions = DirectoryOptions & {
-    cacheMeta?: number | boolean;
+    cache?: number | boolean;
 };
 export type RecursiveOptions = ListFilesOptions & {
     followlink?: boolean;
@@ -123,7 +123,8 @@ export declare class SFile {
     name(): string;
     ext(): string;
     truncExt(e: string): string;
-    up(): SFile;
+    up(): SFile | null;
+    parent(): SFile | null;
     sibling(name: string): SFile;
     closest(name: string | ((f: SFile) => any)): SFile | undefined;
     relPath(base: SFile): string;
@@ -163,10 +164,11 @@ export declare class SFile {
     getDirTree(options?: GetDirTreeOptions): DirTree;
     /**
      *
-     * @param options cacheMeta:
+     * @param options cache:
      *          If true, the metaInfo(result of .getMetaInfo()) of each file object is cached in the file object.
      *          If false, the metaInfo is retrieved each time from the file system when .getMetaInfo is called.
      *          true is more efficient but the metainfo is NOT changed even if the file is modified by other processes.
+     *          If number is specified, the cached info kept within duration in ms
      * @returns
      */
     listFiles(options?: ListFilesOptions): SFile[];

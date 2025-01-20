@@ -71,6 +71,9 @@ const eqTree=assert.func(_eqTree);
 try {
     const FS=await getNodeFS();
     _console.log("metaurl",import.meta.url);
+    console.log(FS.get("/"));
+    console.log(FS.get("/").up());
+    assert(!FS.get("/").up());
     const topDir=FS.get(import.meta.url).sibling("fixture/");
     const root=topDir;//.setPolicy({topDir});
     let cd =root;
