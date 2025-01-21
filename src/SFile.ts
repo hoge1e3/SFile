@@ -103,7 +103,7 @@ export class Cache<T> {
 export type CachedInfo={
   //meta: MetaInfo,
   lstat: Stats,
-  content: Content;
+  //content: Content;
 };
 export class SFile {
   static is(obj:any):obj is SFile {
@@ -297,7 +297,8 @@ export class SFile {
   isDirPath(){
     return this.#path.endsWith("/");
   }
-
+  endsWith(postfix:string){return this.#path.endsWith(postfix);}
+  startsWith(prefix:string){return this.#path.startsWith(prefix);}
   // Path and naming methods
   path() {
     return this.#path;

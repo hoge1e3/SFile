@@ -72,7 +72,6 @@ export declare class Cache<T> {
 }
 export type CachedInfo = {
     lstat: Stats;
-    content: Content;
 };
 export declare class SFile {
     #private;
@@ -118,6 +117,8 @@ export declare class SFile {
         nofollow: boolean;
     }): boolean;
     isDirPath(): boolean;
+    endsWith(postfix: string): boolean;
+    startsWith(prefix: string): boolean;
     path(): string;
     equals(s: string | SFile): boolean;
     name(): string;
