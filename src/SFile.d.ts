@@ -33,9 +33,9 @@ export type RecursiveOptions = ListFilesOptions & {
 export type GetDirTreeExcludeFunction = (f: SFile, options: GetDirTreeExcludeFunctionArgs) => boolean;
 export type GetDirStyle = "flat-absolute" | "flat-relative" | "hierarchical" | "no-recursive";
 export type GetDirTreeOptions = {
-    excludes?: ExcludeOption | GetDirTreeExcludeFunction;
+    excludes: ExcludeOption | GetDirTreeExcludeFunction;
     style: GetDirStyle;
-    base?: SFile;
+    base: SFile;
 };
 export type GetDirTreeExcludeFunctionArgs = {
     fullPath: string;
@@ -162,7 +162,8 @@ export declare class SFile {
     recursive(): Generator<SFile>;
     recursive(options: RecursiveOptions): Generator<SFile>;
     recursive(callback: FileCallback, options: RecursiveOptions): this;
-    getDirTree(options?: GetDirTreeOptions): DirTree;
+    recursive(callback: FileCallback): this;
+    getDirTree(_options?: Partial<GetDirTreeOptions>): DirTree;
     /**
      *
      * @param options cache:

@@ -27,7 +27,7 @@ export type ListFilesOptions=DirectoryOptions&{cache?:number|boolean};
 export type RecursiveOptions=ListFilesOptions&{followlink?:boolean};
 export type GetDirTreeExcludeFunction=(f:SFile, options:GetDirTreeExcludeFunctionArgs)=>boolean;
 export type GetDirStyle = "flat-absolute" | "flat-relative" | "hierarchical" | "no-recursive";
-export type GetDirTreeOptions={excludes?: ExcludeOption|GetDirTreeExcludeFunction , style:GetDirStyle, base?:SFile};
+export type GetDirTreeOptions={excludes: ExcludeOption|GetDirTreeExcludeFunction , style:GetDirStyle, base:SFile};
 export type GetDirTreeExcludeFunctionArgs={fullPath:string, relPath:string, style:GetDirStyle};
 export type FileCallback=(f:SFile)=>any;
 export async function getNodeFS():Promise<FileSystemFactory> {
@@ -142,7 +142,7 @@ export class SFile {
     return this.setText(str);
   }
   lines():string[] {
-    return this.getText().split("\n");
+    return this.getText().split(/[\r\n]+/);
   }
   getText():string{
     const {fs,path}=this.#fs.deps;
@@ -400,6 +400,9 @@ export class SFile {
     }
     const nofollow=!followlink;
     const srcIsDir=src.isDir({nofollow});
+    if (srcIsDir && !dst.exists()) {
+      dst.mkdir();
+    }
     let dstIsDir=dst.isDir({nofollow});
     if (!srcIsDir && dstIsDir) {
       dst=dst.rel(src.name());
@@ -530,6 +533,7 @@ export class SFile {
   recursive():Generator<SFile>;
   recursive(options:RecursiveOptions):Generator<SFile>;
   recursive(callback:FileCallback, options:RecursiveOptions):this;
+  recursive(callback:FileCallback):this;
   recursive(a1?:FileCallback|RecursiveOptions, a2?:RecursiveOptions) {
     const options:RecursiveOptions=a2 ?? ((a1 && typeof a1==="object") ? a1 : {});
     const callback:FileCallback|undefined=(a1 && typeof a1==="function" ? a1 : undefined); 
@@ -570,9 +574,13 @@ export class SFile {
     }
   }
   
-  getDirTree(options:GetDirTreeOptions={style: "flat-absolute"}):DirTree {
+  getDirTree(_options:Partial<GetDirTreeOptions>={}):DirTree {
     let dest = {} as DirTree;
-    options.style = options.style || "flat-absolute";
+    const options:GetDirTreeOptions={
+      style: _options.style || "flat-absolute",
+      excludes: _options.excludes || [],
+      base: _options.base || this,
+    };
     let excludesFunc:GetDirTreeExcludeFunction;
     if (typeof options.excludes==="function") {
         excludesFunc=options.excludes as GetDirTreeExcludeFunction;
@@ -596,7 +604,6 @@ export class SFile {
         };
         excludesFunc=defaultExcludes;
     }
-    let base=options.base||this;
     const files = this.listFiles({...options, cache:true});
     if (options.style == "no-recursive") {
       for (let file of files) {
@@ -604,6 +611,7 @@ export class SFile {
       }
       return dest;
     }
+    const base=options.base;
     const newoption = {style: options.style, base};
     for (let file of files) {
         const meta = file.getMetaInfo({nofollow:true});

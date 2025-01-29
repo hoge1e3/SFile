@@ -74,15 +74,16 @@ try {
     console.log(FS.get("/"));
     console.log(FS.get("/").up());
     assert(!FS.get("/").up());
-    const topDir=FS.get(import.meta.url).sibling("fixture/");
-    const root=topDir;//.setPolicy({topDir});
-    let cd =root;
-    const r=root.rel.bind(root);
+    const fixture=FS.get(import.meta.url).sibling("fixture/");
+    //const fixture=topDir;//.setPolicy({topDir});
+    checkCopyDir(fixture);
+    //let cd =fixture;
+    const r=fixture.rel.bind(fixture);
     const romd=r("rom/");
     // check relpath:
     //  path= /a/b/c   base=/a/b/  res=c
     assert.eq(r("a/b/c").relPath(r("a/b/")) , "c");
-    assert.eq(r("a/b/c").relPath(root.rel("a/b/")) , "c");
+    assert.eq(r("a/b/c").relPath(fixture.rel("a/b/")) , "c");
     //  path= /a/b/c/   base=/a/b/  res=c/
     assert(r("a/b/c/").path().endsWith("/"), "endsWith/ "+r("a/b/c/").path());
     assert(r("a/b/c/").isDirPath(), "dirpath");
@@ -92,7 +93,7 @@ try {
     //  path= /a/b/c/   base=/a/b/e/f  res= ../../c/
     assert.eq(r("a/b/c/").relPath(r("a/b/e/f")) , "../../c/");
     // ext()
-    assert.eq(root.rel("test.txt").ext(), ".txt");
+    assert.eq(fixture.rel("test.txt").ext(), ".txt");
     //assert.eq(P.normalize("c:\\hoge/fuga\\piyo//"), "c:/hoge/fuga/piyo/");
     _console.log("isChildOf", r("hoge/fuga\\"),(r("hoge\\fuga/piyo//")));
     assert(r("hoge/fuga\\").contains(r("hoge\\fuga/piyo//")), "isChildOf");
@@ -103,18 +104,18 @@ try {
     //obsolate: ls does not enum mounted dirs
     //assert(r.indexOf("rom/")>=0, r);
     //let romd = root.rel("rom/");
-    let ramd = root.rel("ram/");
+    let ramd = fixture.rel("ram/");
     if(ramd.exists()) await retryRmdir(ramd);
     ramd.mkdir();
-    const testf = root.rel("testfn.txt");
+    const testf = fixture.rel("testfn.txt");
     cleanups.push(()=>testf.exists() && testf.rm());  
     let testd: SFile;
     if (!testf.exists()) {
         pass=1;
         _console.log("Test #", pass);
-        testd = cd = cd.rel(/*Math.random()*/"testdir" + "/");
+        testd = fixture.rel(/*Math.random()*/"testdir" + "/");
         cleanups.push(()=>testd.exists() && testd.rm({ r: true }));
-        _console.log("Enter", cd);
+        _console.log("Enter", testd);
         assert(!testd.exists(), testd+" exists");
         testd.mkdir();
         //--- check exists
@@ -153,7 +154,7 @@ try {
         checkGetDirTree(romd);
 
         assert(testd.rel("sub/").exists());
-        assert(root.rel("testdir/sub/").exists());
+        assert(fixture.rel("testdir/sub/").exists());
         assert(testf.exists());
         let sf = testd.setPolicy({ topDir: testd });//SandBoxFile.create(testd._clone());
         assert(sf.rel("test.txt").text() == ABCD);
@@ -184,33 +185,33 @@ try {
         assert(!testd.rel("sub/del.txt").exists());
         ramd.rel("files/").rm();
         assert(testd.exists());
-        const nfs=topDir;
-        _console.log("nfsls", nfs.ls());
-        nfs.rel("sub/test2.txt").text(romd.rel("Actor.tonyu").text());
-        nfs.rel("test.txt").text(ABCD);
+        //const nfs=fixture;
+        _console.log("fixturels", fixture.ls());
+        fixture.rel("sub/test2.txt").text(romd.rel("Actor.tonyu").text());
+        fixture.rel("test.txt").text(ABCD);
         /*let pngurl = nfs.rel("Tonyu/Projects/MapTest/images/park.png").text();
         assert(pngurl.startsWith("data:"));
         nfs.rel("sub/test.png").text(pngurl);*/
 
-        nfs.rel("sub/test.png").copyTo(testd.rel("test.png"));
-        chkCpy(nfs.rel("Tonyu/Projects/MapTest/Test.tonyu"));
-        chkCpy(nfs.rel("Tonyu/Projects/MapTest/images/park.png"));
-        chkCpy(testd.rel("test.png"));
+        fixture.rel("sub/test.png").copyTo(testd.rel("test.png"));
+        checkCopyFile(fixture.rel("Tonyu/Projects/MapTest/Test.tonyu"));
+        checkCopyFile(fixture.rel("Tonyu/Projects/MapTest/images/park.png"));
+        checkCopyFile(testd.rel("test.png"));
         testd.rel("test.png").rm();
         //---- test append
-        let beforeAppend = nfs.rel("Tonyu/Projects/MapTest/Test.tonyu");
-        let appended = nfs.rel("Tonyu/Projects/MapTest/TestApp.tonyu");
+        let beforeAppend = fixture.rel("Tonyu/Projects/MapTest/Test.tonyu");
+        let appended = fixture.rel("Tonyu/Projects/MapTest/TestApp.tonyu");
         beforeAppend.copyTo(appended);
         let apText = "\n//tuikasitayo-n\n";
         appended.appendText(apText);
         assert.eq(beforeAppend.text() + apText, appended.text());
         checkMtime(appended);
         //await checkRemoveError(nfs);
-        checkGetDirTree_nw(nfs);
+        checkGetDirTree_nw(fixture);
     
         _console.log("text.txt", testd.rel("test.txt").path(), testd.rel("test.txt").text());
         testd.rel("test.txt").text(romd.rel("Actor.tonyu").text() + ABCD + CDEF);
-        chkCpy(testd.rel("test.txt"));
+        checkCopyFile(testd.rel("test.txt"));
         testd.rel("test.txt").text(ABCD);
         //testEach(testd);
         //--- the big file
@@ -239,9 +240,10 @@ try {
             pass=2;
             _console.log("Test #", pass);
             //testf = root.rel("testfn.txt");
-            testd = cd = FS.get(testf.text());
-            assert(cd.exists());
-            _console.log("Enter", cd);
+            testd = FS.get(testf.text());
+            assert(testd.name().match(/^testdir/));
+            assert(testd.exists());
+            _console.log("Enter", testd);
             const tmp2=testd.rel("tmp2");
             assert(tmp2.exists());
             tmp2.rm({r:true});
@@ -272,9 +274,8 @@ try {
             }).then(function () {
                 return chkRecurAsync(ramd, {}, ["a/b.txt","c.txt"]);
             });*/
-            const nfs=topDir;
-            assert.eq(nfs.rel("sub/test2.txt").text(), romd.rel("Actor.tonyu").text());
-            assert.eq(nfs.rel("test.txt").text(), ABCD);
+            assert.eq(fixture.rel("sub/test2.txt").text(), romd.rel("Actor.tonyu").text());
+            assert.eq(fixture.rel("test.txt").text(), ABCD);
             //let pngurl = nfs.rel("Tonyu/Projects/MapTest/images/park.png").text();
             //assert.eq(nfs.rel("sub/test.png").text(), pngurl);
         } finally {
@@ -367,7 +368,25 @@ async function chkBigFile(testd: SFile) {
         });//.then(DU.NOP, DU.E);
     }
 }*/
-function chkCpy(f:SFile) {
+function checkCopyDir(dir:SFile) {
+    let tmp = dir.sibling("tmp_" + dir.name());
+    dir.copyTo(tmp);
+    checkSameDir(dir, tmp);
+    tmp.rm({r:true});
+}
+function checkSameDir(a:SFile, b:SFile) {
+    let res1 = [] as string[];
+    let res2 = [] as string[];
+    a.recursive(function (f:SFile) {
+        res1.push(f.relPath(a));
+    });
+    b.recursive(function (f:SFile) {
+        res2.push(f.relPath(b));
+    });
+    _console.log("checkSameDir", a.path(), b.path(), res1, res2);
+    _assert.deepStrictEqual(res1.sort(), res2.sort());
+}
+function checkCopyFile(f:SFile) {
     let tmp = f.sibling("tmp_" + f.name());
     f.copyTo(tmp);
     checkSame(f, tmp);
