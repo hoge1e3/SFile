@@ -31,10 +31,19 @@ export type GetDirTreeOptions={excludes: ExcludeOption|GetDirTreeExcludeFunction
 export type GetDirTreeExcludeFunctionArgs={fullPath:string, relPath:string, style:GetDirStyle};
 export type FileCallback=(f:SFile)=>any;
 export async function getNodeFS():Promise<FileSystemFactory> {
-  const fs = await import(/* webpackIgnore: true */"node:fs");
-  const path = await import(/* webpackIgnore: true */"node:path");
-  return new FileSystemFactory({fs, path, Buffer});
+  try {
+    const fs = await import(/* webpackIgnore: true */"node:fs");
+    const path = await import(/* webpackIgnore: true */"node:path");
+    return new FileSystemFactory({fs, path, Buffer});
+  } catch(e) {
+    const p=(globalThis as any)?.FS;
+    if (p && typeof p.getRootFS==="function") return p;
+    const p2=(globalThis as any)?.pNode?.FS;
+    if (p2 && typeof p2.getRootFS==="function") return p2; 
+    throw e; 
+  }
 }
+ 
 export class FileSystemFactory {
   mimeTypes: MIMETypes=defaultMIMETYpes;
   constructor(public deps: DependencyContainer) {
