@@ -668,7 +668,7 @@ export class SFile {
     const {excludesF}=this.parseExcludeOption(options);
     if (options.cache || options.cache===0) {
       // cache implicitly sets nofollow: true
-      if (!this.isDir({nofollow:true})) {
+      if (!this.isDir({nofollow:true}) && !this.isLink()) {
         throw new Error(this+' is not a directory');
       }
       const res=[] as SFile[];
@@ -726,6 +726,8 @@ export class SFile {
     return fs.realpathSync(this.#path);
   }
   link(to:SFile) {
+    //to: existent this: non-existent
+    //`this` points to `to`
     const {fs,path}=this.#fs.deps;
     fs.symlinkSync(to.path(), this.#path, "junction");
     this.cache.clear();

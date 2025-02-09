@@ -175,6 +175,9 @@ try {
             ramd.rel("files").link(testd);
         });*/
         ramd.rel("files/").link(testd);
+        eqa(ramd.rel("files/").ls(), testd.ls() );
+        eqa(ramd.rel("files/").listFiles().map(f=>f.name()),
+             testd.listFiles().map(f=>f.name()) );
         testd.rel("sub/del.txt").text("DEL");
         assert(testd.rel("sub/del.txt").exists(), "del.txt not exists");
         assert(ramd.rel("files/").isLink());
