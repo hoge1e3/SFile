@@ -356,7 +356,7 @@ export class SFile {
   }
   closest(name:string|((f:SFile)=>any)):SFile|undefined {
     if (typeof name==="string"){
-      return this.closest((f:SFile)=>f.name()===name);
+      return this.closest((f:SFile)=>f.rel(name).exists());
     } else {
       const f=(f:SFile):SFile|undefined=>{
         const res=name(f);
