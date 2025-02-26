@@ -25,10 +25,10 @@ export type ExcludeOption=(ExcludeFunction | string[] | ExcludeHash);
 export type DirectoryOptions={excludes?: ExcludeOption, excludesF?:ExcludeFunction, includeDir?:boolean};
 export type ListFilesOptions=DirectoryOptions&{cache?:number|boolean};
 export type RecursiveOptions=ListFilesOptions&{followlink?:boolean};
-export type GetDirTreeExcludeFunction=(f:SFile, options:GetDirTreeExcludeFunctionArgs)=>boolean;
+//export type GetDirTreeExcludeFunction=(f:SFile, options:GetDirTreeExcludeFunctionArgs)=>boolean;
 export type GetDirStyle = "flat-absolute" | "flat-relative" | "hierarchical" | "no-recursive";
-export type GetDirTreeOptions={excludes: ExcludeOption|GetDirTreeExcludeFunction , style:GetDirStyle, base:SFile};
-export type GetDirTreeExcludeFunctionArgs={fullPath:string, relPath:string, style:GetDirStyle};
+export type GetDirTreeOptions={excludes: ExcludeOption/*|GetDirTreeExcludeFunction*/ , style:GetDirStyle, base:SFile};
+//export type GetDirTreeExcludeFunctionArgs={fullPath?:string, relPath?:string, style?:GetDirStyle};
 export type FileCallback=(f:SFile)=>any;
 export async function getNodeFS():Promise<FileSystemFactory> {
   try {
@@ -585,61 +585,59 @@ export class SFile {
   
   getDirTree(_options:Partial<GetDirTreeOptions>={}):DirTree {
     let dest = {} as DirTree;
-    const options:GetDirTreeOptions={
-      style: _options.style || "flat-absolute",
-      excludes: _options.excludes || [],
-      base: _options.base || this,
-    };
-    const style=options.style;
-    let excludesFunc:GetDirTreeExcludeFunction;
-    if (typeof options.excludes==="function") {
-        excludesFunc=options.excludes as GetDirTreeExcludeFunction;
+    //const options:GetDirTreeOptions={
+    const style= _options.style || "flat-absolute";
+    const excludes= _options.excludes || [];
+    const base= _options.base || this;
+    let excludesFunc:ExcludeFunction;
+    if (typeof excludes==="function") {
+        excludesFunc=excludes as ExcludeFunction;
     } else {
-        const excludesAry = (options.excludes || []).map(truncSep);
-        const defaultExcludes=(f:SFile, {fullPath, relPath, ...options}: GetDirTreeExcludeFunctionArgs)=>{
+        const excludesAry = (excludes || []).map(truncSep);
+        const defaultExcludes=(file:SFile)=>{
+          const fullPath = file.path();
+          const relPath = file.relPath(base);
             switch (style) {
-                case "flat-relative":
-                case "hierarchical":
-                    if (excludesAry.indexOf(truncSep(relPath)) >= 0) {
-                        return true;
-                    }
-                    break;
-                case "flat-absolute":
-                    if (excludesAry.indexOf(truncSep(fullPath)) >= 0) {
-                        return true;
-                    }
-                    break;
-            }
-            return false;
+              case "flat-relative":
+              case "hierarchical":
+                  if (excludesAry.indexOf(truncSep(relPath)) >= 0) {
+                      return true;
+                  }
+                  break;
+              case "flat-absolute":
+                  if (excludesAry.indexOf(truncSep(fullPath)) >= 0) {
+                      return true;
+                  }
+                  break;
+          }
+          return false;
         };
         excludesFunc=defaultExcludes;
     }
-    const files = this.listFiles({...options, cache:true});
+    const newoptions:GetDirTreeOptions = {style, base, excludes:excludesFunc};
+    const files = this.listFiles({...newoptions, cache:true});
     if (style == "no-recursive") {
       for (let file of files) {
         dest[file.name()] = file.getMetaInfo({nofollow:true});
       }
       return dest;
     }
-    const base=options.base;
-    const newoption:GetDirTreeOptions = {style, base, excludes:excludesFunc};
     for (let file of files) {
         const meta = file.getMetaInfo({nofollow:true});
-        const fullPath = file.path();
-        const relPath = file.relPath(base);
-        if (excludesFunc(file, {fullPath, relPath,  ...options})) continue;
         if (file.isDir({nofollow:true})) {
-            switch (options.style) {
+            switch (style) {
                 case "flat-absolute":
                 case "flat-relative":
-                    Object.assign(dest, file.getDirTree(newoption));
+                    Object.assign(dest, file.getDirTree(newoptions));
                     break;
                 case "hierarchical":
-                    dest[addSep(file.name())] = file.getDirTree(newoption);
+                    dest[addSep(file.name())] = file.getDirTree(newoptions);
                     break;
             }
         } else {
-            switch (options.style) {
+          const fullPath = file.path();
+          const relPath = file.relPath(base);
+            switch (style) {
                 case "flat-absolute":
                     dest[fullPath] = meta;
                     break;

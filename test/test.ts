@@ -47,6 +47,7 @@ const _console={
         "BLOB read done!": false,
         "buildScrap": false,
         "checkWatch": false,
+        "checkSameDir": false,
         getDirTree: false,
         FULLL: false,
     } as {[key:string]:boolean},
@@ -66,7 +67,7 @@ const alert:Function=(s:string)=>_console.log("ALERT",s);
 export async function main(){
 let pass:number=0;
 //let testf: SFile;
-const cleanups=[] as Function[];
+const cleanups=[] as (()=>Promise<any>)[];
 const eqTree=assert.func(_eqTree);
 try {
     const FS=await getNodeFS();
@@ -76,7 +77,7 @@ try {
     assert(!FS.get("/").up());
     const fixture=FS.get(import.meta.url).sibling("fixture/");
     //const fixture=topDir;//.setPolicy({topDir});
-    checkCopyDir(fixture);
+    await checkCopyDir(fixture);
     //let cd =fixture;
     const r=fixture.rel.bind(fixture);
     const romd=r("rom/");
@@ -108,13 +109,13 @@ try {
     if(ramd.exists()) await retryRmdir(ramd);
     ramd.mkdir();
     const testf = fixture.rel("testfn.txt");
-    cleanups.push(()=>testf.exists() && testf.rm());  
+    cleanups.push(async ()=>testf.exists() && testf.rm());  
     let testd: SFile;
     if (!testf.exists()) {
         pass=1;
         _console.log("Test #", pass);
         testd = fixture.rel(/*Math.random()*/"testdir" + "/");
-        cleanups.push(()=>testd.exists() && testd.rm({ r: true }));
+        cleanups.push(async ()=>testd.exists() && await retryRmdir(testd));
         _console.log("Enter", testd);
         assert(!testd.exists(), testd+" exists");
         testd.mkdir();
@@ -129,6 +130,7 @@ try {
         assert(romd.rel("Actor.tonyu").text().length > 0);
         testd.rel("sub/test2.txt").text(romd.rel("Actor.tonyu").text());
         listFilesTest(romd);
+        await testGetDirTreeExcludeInSubdir(testd);
         let tncnt:string[] = [];
         const pushtn=(f:SFile)=>tncnt.push(f.relPath(romd));
         romd.recursive(pushtn, { 
@@ -197,9 +199,9 @@ try {
         nfs.rel("sub/test.png").text(pngurl);*/
 
         fixture.rel("sub/test.png").copyTo(testd.rel("test.png"));
-        checkCopyFile(fixture.rel("Tonyu/Projects/MapTest/Test.tonyu"));
-        checkCopyFile(fixture.rel("Tonyu/Projects/MapTest/images/park.png"));
-        checkCopyFile(testd.rel("test.png"));
+        await checkCopyFile(fixture.rel("Tonyu/Projects/MapTest/Test.tonyu"));
+        await checkCopyFile(fixture.rel("Tonyu/Projects/MapTest/images/park.png"));
+        await checkCopyFile(testd.rel("test.png"));
         testd.rel("test.png").rm();
         //---- test append
         let beforeAppend = fixture.rel("Tonyu/Projects/MapTest/Test.tonyu");
@@ -214,7 +216,7 @@ try {
     
         _console.log("text.txt", testd.rel("test.txt").path(), testd.rel("test.txt").text());
         testd.rel("test.txt").text(romd.rel("Actor.tonyu").text() + ABCD + CDEF);
-        checkCopyFile(testd.rel("test.txt"));
+        await checkCopyFile(testd.rel("test.txt"));
         testd.rel("test.txt").text(ABCD);
         //testEach(testd);
         //--- the big file
@@ -249,7 +251,8 @@ try {
             _console.log("Enter", testd);
             const tmp2=testd.rel("tmp2");
             assert(tmp2.exists());
-            tmp2.rm({r:true});
+            await retryRmdir(tmp2);
+            //tmp2.rm({r:true});
             assert(testd.rel("test.txt").text() === ABCD);
             assert(testd.rel("sub/").exists());
             assert(testd.rel("sub/test2.txt").text() === romd.rel("Actor.tonyu").text());
@@ -267,7 +270,7 @@ try {
             chkRecur(testd, {}, ["sub/test2.txt"]);
             */
 
-            testd.rm({ r: true });
+            await retryRmdir(testd);//.rm({ r: true });
             assert(!testd.exists());
             testf.rm({ r: true });
             assert(!testf.exists());
@@ -298,7 +301,7 @@ try {
     console.log((e as any).stack);
     alert("#"+pass+" test Failed. "+e);
     try {
-        for (let c of cleanups) c();
+        for (let c of cleanups) await c();
     } catch (e) {
         _console.error(e);
     }
@@ -371,11 +374,12 @@ async function chkBigFile(testd: SFile) {
         });//.then(DU.NOP, DU.E);
     }
 }*/
-function checkCopyDir(dir:SFile) {
+async function checkCopyDir(dir:SFile) {
     let tmp = dir.sibling("tmp_" + dir.name());
     dir.copyTo(tmp);
     checkSameDir(dir, tmp);
-    tmp.rm({r:true});
+    await retryRmdir(tmp);
+    //tmp.rm({r:true});
 }
 function checkSameDir(a:SFile, b:SFile) {
     let res1 = [] as string[];
@@ -389,7 +393,7 @@ function checkSameDir(a:SFile, b:SFile) {
     _console.log("checkSameDir", a.path(), b.path(), res1, res2);
     _assert.deepStrictEqual(res1.sort(), res2.sort());
 }
-function checkCopyFile(f:SFile) {
+async function checkCopyFile(f:SFile) {
     let tmp = f.sibling("tmp_" + f.name());
     f.copyTo(tmp);
     checkSame(f, tmp);
@@ -440,7 +444,8 @@ function checkCopyFile(f:SFile) {
         checkSame(f, tmp);
         tmp.text("DUMMY");
     }
-    tmp.rm({r:true});
+    await retryRmdir(tmp);
+    //tmp.rm({r:true});
 }
 function checkSame(a:SFile, b:SFile) {
     _console.log("check same", a.name(), b.name(), a.text().length, b.text().length);
@@ -732,6 +737,26 @@ function checkGetDirTree(dir: SFile) {
 function checkGetDirTree_nw(dir: SFile) {
     const noex=getDirTree3Type(dir);
     _console.log("getDirTree-nw", noex);
+}
+async function testGetDirTreeExcludeInSubdir(testdir:SFile) {
+    const work=testdir.rel("testGetDirTreeExcludeInSubdir");
+    work.mkdir();
+    work.rel("a.txt").text("a");
+    work.rel("b/c/c.txt").text("c");
+    work.rel("b/d/d.txt").text("d");
+    work.rel("b/d/secret.txt").text("this is secret folder");
+    const tree=work.getDirTree({
+        style:"flat-relative",
+        excludes(f:SFile) {
+            return f.rel("secret.txt").exists();
+        }
+    });
+    console.log("testGetDirTreeExcludeInSubdir",tree);
+    assert(tree["a.txt"],"a.txt");
+    assert(tree["b/c/c.txt"],"c.txt");
+    assert(!tree["b/d/d.txt"],"d.txt");
+    assert(!tree["b/d/secret.txt"],"secret.txt");
+    await retryRmdir(work);
 }
 /*
 async function checkRemoveError(dir) {

@@ -30,17 +30,11 @@ export type ListFilesOptions = DirectoryOptions & {
 export type RecursiveOptions = ListFilesOptions & {
     followlink?: boolean;
 };
-export type GetDirTreeExcludeFunction = (f: SFile, options: GetDirTreeExcludeFunctionArgs) => boolean;
 export type GetDirStyle = "flat-absolute" | "flat-relative" | "hierarchical" | "no-recursive";
 export type GetDirTreeOptions = {
-    excludes: ExcludeOption | GetDirTreeExcludeFunction;
+    excludes: ExcludeOption;
     style: GetDirStyle;
     base: SFile;
-};
-export type GetDirTreeExcludeFunctionArgs = {
-    fullPath: string;
-    relPath: string;
-    style: GetDirStyle;
 };
 export type FileCallback = (f: SFile) => any;
 export declare function getNodeFS(): Promise<FileSystemFactory>;
