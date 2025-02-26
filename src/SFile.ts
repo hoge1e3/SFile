@@ -590,13 +590,14 @@ export class SFile {
       excludes: _options.excludes || [],
       base: _options.base || this,
     };
+    const style=options.style;
     let excludesFunc:GetDirTreeExcludeFunction;
     if (typeof options.excludes==="function") {
         excludesFunc=options.excludes as GetDirTreeExcludeFunction;
     } else {
         const excludesAry = (options.excludes || []).map(truncSep);
         const defaultExcludes=(f:SFile, {fullPath, relPath, ...options}: GetDirTreeExcludeFunctionArgs)=>{
-            switch (options.style) {
+            switch (style) {
                 case "flat-relative":
                 case "hierarchical":
                     if (excludesAry.indexOf(truncSep(relPath)) >= 0) {
@@ -614,14 +615,14 @@ export class SFile {
         excludesFunc=defaultExcludes;
     }
     const files = this.listFiles({...options, cache:true});
-    if (options.style == "no-recursive") {
+    if (style == "no-recursive") {
       for (let file of files) {
         dest[file.name()] = file.getMetaInfo({nofollow:true});
       }
       return dest;
     }
     const base=options.base;
-    const newoption = {style: options.style, base};
+    const newoption = {style, base, excludesFunc};
     for (let file of files) {
         const meta = file.getMetaInfo({nofollow:true});
         const fullPath = file.path();
