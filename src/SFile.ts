@@ -622,7 +622,7 @@ export class SFile {
       return dest;
     }
     const base=options.base;
-    const newoption = {style, base, excludesFunc};
+    const newoption:GetDirTreeOptions = {style, base, excludes:excludesFunc};
     for (let file of files) {
         const meta = file.getMetaInfo({nofollow:true});
         const fullPath = file.path();
