@@ -116,6 +116,7 @@ export declare class SFile {
     path(): string;
     equals(s: string | SFile): boolean;
     name(): string;
+    truncSep(): string;
     ext(): string;
     truncExt(e: string): string;
     up(): SFile | null;

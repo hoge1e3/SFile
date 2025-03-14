@@ -100,6 +100,7 @@ try {
     assert(r("hoge/fuga\\").contains(r("hoge\\fuga/piyo//")), "isChildOf");
     assert(!r("hoge/fugo\\").contains(r("hoge\\fuga/piyo//")), "!isChildOf");
     testContent();
+    checkTruncSep(FS);
     let ABCD = "abcd\nefg";
     let CDEF = "defg\nてすと";
     //obsolate: ls does not enum mounted dirs
@@ -594,6 +595,12 @@ async function checkWatch(testd:SFile) {
         'change:hogefuga.txt',
     ]))/*.join("\n")*/);//, "checkWatch");
 
+}
+function checkTruncSep(FS:FileSystemFactory) {
+    assert.eq(FS.get("/tmp/test/").name(), "test/");
+    assert.eq(FS.get("/tmp/test/").truncSep(), "test");
+    assert.eq(FS.get("/tmp/test").name(), "test");
+    assert.eq(FS.get("/tmp/test").truncSep(), "test");
 }
 function checkMtime(f:SFile) {
     const t=f.lastUpdate();

@@ -321,8 +321,11 @@ export class SFile {
   }
 
   name() {
+    return this.truncSep()+(this.#path.endsWith("/")?"/":"");
+  }
+  truncSep(){
     const {fs,path}=this.#fs.deps;
-    return path.basename(this.#path)+(this.#path.endsWith("/")?"/":"");
+    return path.basename(this.#path);
   }
 
   ext() {
