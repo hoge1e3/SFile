@@ -300,7 +300,8 @@ export class SFile {
     if (nofollow) {
       return this.lstat().isDirectory();
     } else {
-      return this.stat().isDirectory();
+      // this.stat().isDirectory(); fails if it is missing link
+      return this.resolveLink().isDir({nofollow:true});
     }
   }
   isDirPath(){
