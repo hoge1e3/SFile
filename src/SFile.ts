@@ -700,8 +700,14 @@ export class SFile {
     return this.listFiles(options).map(f=>f.fixSep().name());
   }
   fixSep(){
-    if (this.isDir()) {
-      this.#path=addSep(this.#path);
+    const lstat=this.lstat();
+    if (lstat.isSymbolicLink()) {
+      const link=this.resolveLink();
+      if (link.isDir()) {
+        this._directorify();
+      }
+    } else if (lstat.isDirectory()) {
+      this._directorify();
     }
     return this;
   }
