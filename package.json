@@ -1,6 +1,6 @@
 {
   "name": "@hoge1e3/sfile",
-  "version": "1.2.0",
+  "version": "1.2.7",
   "description": "node.js fs Comprehensive File Wrapper",
   "main": "./src/SFile.js",
   "types": "./src/SFile.d.ts",
@@ -13,15 +13,19 @@
     "type": "git",
     "url": "git+https://github.com/hoge1e3/SFile.git"
   },
-  "keywords": ["filesystem","fs","wrapper","oo"],
+  "keywords": [
+    "filesystem",
+    "fs",
+    "wrapper",
+    "oo"
+  ],
   "author": "",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/hoge1e3/SFile/issues"
   },
   "homepage": "https://github.com/hoge1e3/SFile#readme",
-  "dependencies": {
-  },
+  "dependencies": {},
   "files": [
     "src"
   ],
