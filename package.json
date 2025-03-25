@@ -6,8 +6,10 @@
   "types": "./src/SFile.d.ts",
   "type": "module",
   "scripts": {
-    "build": "npx tsc",
-    "test": "npm run build && node test/test.js && node test/test.js"
+    "tsc": "npx tsc",
+    "webpack": "echo no-webpack-needed",
+    "webpack-dev": "echo no-webpack-needed",
+    "test": "npm run tsc && node test/test.js && node test/test.js"
   },
   "repository": {
     "type": "git",
