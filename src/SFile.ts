@@ -307,8 +307,8 @@ export class SFile {
   isDirPath(){
     return this.#path.endsWith("/");
   }
-  endsWith(postfix:string){return this.#path.endsWith(postfix);}
-  startsWith(prefix:string){return this.#path.startsWith(prefix);}
+  endsWith(postfix:string){return this.name().endsWith(postfix);}
+  startsWith(prefix:string){return this.name().startsWith(prefix);}
   // Path and naming methods
   path() {
     return this.#path;
