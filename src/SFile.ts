@@ -30,6 +30,9 @@ export type GetDirStyle = "flat-absolute" | "flat-relative" | "hierarchical" | "
 export type GetDirTreeOptions={excludes: ExcludeOption/*|GetDirTreeExcludeFunction*/ , style:GetDirStyle, base:SFile};
 //export type GetDirTreeExcludeFunctionArgs={fullPath?:string, relPath?:string, style?:GetDirStyle};
 export type FileCallback=(f:SFile)=>any;
+/**
+ * @deprecated use @hoge1e3/sfile-node instead
+ */
 export async function getNodeFS():Promise<FileSystemFactory> {
   try {
     const fs = await import(/* webpackIgnore: true */"node:fs");
