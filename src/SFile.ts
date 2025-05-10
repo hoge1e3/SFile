@@ -154,7 +154,7 @@ export class SFile {
     return this.setText(str);
   }
   lines():string[] {
-    return this.getText().split(/[\r\n]+/);
+    return this.getText().split(/\r?\n/);
   }
   getText():string{
     const {fs,path}=this.#fs.deps;
