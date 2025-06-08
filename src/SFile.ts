@@ -771,5 +771,21 @@ export class SFile {
       }
     };
   }
+  isReadOnly() {
+    const {fs}=this.#fs.deps;
+    try {
+      fs.accessSync(this.path(), fs.constants.R_OK); // 読み取り可能か
+    } catch (err) {
+      return false; // 読み取りできなければ読み取り専用ではない
+    }
+
+    try {
+      fs.accessSync(this.path(), fs.constants.W_OK); // 書き込み可能か
+      return false; // 書き込みもできる → 読み取り専用ではない
+    } catch (err) {
+      return true; // 書き込みできない → 読み取り専用
+    }
+
+  }
 
 }
