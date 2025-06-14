@@ -49,6 +49,7 @@ export async function getNodeFS():Promise<FileSystemFactory> {
  
 export class FileSystemFactory {
   mimeTypes: MIMETypes=defaultMIMETYpes;
+  #defaultPolicy?: Policy;
   constructor(public deps: DependencyContainer) {
       Content.setBufferPolyfill(deps.Buffer);
   }
@@ -77,7 +78,10 @@ export class FileSystemFactory {
   }
   get(inputPath:string) {
     //const normalizedPath = this._normalizePath(inputPath);
-    return new SFile(this, inputPath);//normalizedPath);
+    return new SFile(this, inputPath, this.#defaultPolicy);//normalizedPath);
+  }
+  setDefaultPolicy(policy?:Policy) {
+    this.#defaultPolicy=policy;
   }
 }
 export type Policy={
@@ -353,6 +357,11 @@ export class SFile {
     }
     const dirn=path.dirname(this.#path);
     if (dirn===this.#path) return null;
+    if (this.#policy) {
+      if (!SFile.containsPath( this.#policy.topDir.path(), dirn)) {
+        return null;
+      }
+    }
     return this.clone(dirn);
   }
   parent(){return this.up();}
@@ -727,8 +736,12 @@ export class SFile {
     if (!p) throw new Error(`Cannot prepare dir for '/'`);
     return p.exists() || p.mkdir();
   }
-  contains(file:SFile) {
-    return truncSep(file.path()).startsWith(truncSep(this.path()));
+  contains(child:SFile) {
+    return SFile.containsPath(this.path(), child.path());
+    // truncSep(child.path()).startsWith(truncSep(this.path()));
+  }
+  static containsPath(parent:string, child:string){
+    return truncSep(child).startsWith(truncSep(parent));
   }
   isLink():string|undefined {
     const {fs,path}=this.#fs.deps;
