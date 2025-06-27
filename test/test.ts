@@ -432,7 +432,7 @@ async function checkCopyFile(f:SFile) {
     let c2=Content.bin(b, f.contentType());
     let bins=c2.toArrayBuffer();
     _console.log("bins",b,c2,bins);
-    tmp.setBytes(new Uint8Array(bins));
+    tmp.setBytes(bins);
     tmp.text("DUMMY");
 
 
@@ -490,11 +490,11 @@ function chkRecur(dir:SFile, options:DirectoryOptions, result:string[]) {
 function testContent() {
     let C = Content;
     const a=[0xe3, 0x81, 0xa6, 0xe3, 0x81, 0x99, 0xe3, 0x81, 0xa8, 0x61, 0x62, 0x63];
-    const conts:{[key:string]: [string|ArrayBufferLike, ( ((s:string)=>Content)| ((s:ArrayBufferLike)=>Content) ) , (c:Content)=>string|ArrayBufferLike]}={
+    const conts:{[key:string]: [string|ArrayBuffer|Buffer, ( ((s:string)=>Content)| ((s:ArrayBuffer)=>Content) ) , (c:Content)=>string|ArrayBuffer|Buffer]}={
         p:["てすとabc", (s:string)=>C.plainText(s), (c:Content)=>c.toPlainText()],
         u:["data:text/plain;base64,44Gm44GZ44GoYWJj", (u:string)=>C.url(u), (c:Content)=>c.toURL()],
-        a:[Uint8Array.from(a).buffer, (a:ArrayBufferLike)=>C.bin(a, "text/plain"), (c:Content)=>c.toArrayBuffer()],
-        n:[Buffer.from(a),(n:ArrayBufferLike)=>C.bin(n, "text/plain"), (c:Content)=>c.toNodeBuffer()],
+        a:[Uint8Array.from(a).buffer, (a:ArrayBuffer)=>C.bin(a, "text/plain"), (c:Content)=>c.toArrayBuffer()],
+        n:[Buffer.from(a),(n:ArrayBuffer)=>C.bin(n, "text/plain"), (c:Content)=>c.toNodeBuffer()],
     };
     /*if (typeof Buffer!=="undefined") {
         conts.n=[Buffer.from(a),(n)=>C.bin(n, "text/plain"), (c)=>c.toNodeBuffer()];

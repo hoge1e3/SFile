@@ -204,7 +204,7 @@ export class SFile {
     this.setBytes(b);
     return this;
   }
-  setBytes(b: ArrayBuffer|Buffer) {
+  setBytes<T extends ArrayBuffer|Buffer>(b: T) {
     const {fs,path,Buffer}=this.#fs.deps;
     this.prepareDir();
     if (Content.isArrayBuffer(b)) {
