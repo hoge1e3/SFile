@@ -135,7 +135,7 @@ export class SFile {
     this.#path = __fs._normalizePath(filePath); 
     this.#policy=policy;
     if (policy && !policy.topDir.contains(this)) {
-      throw new Error(`Cannot create files outside ${policy.topDir}`);
+      throw new Error(`Creating '${filePath}' is prohibited by policy. It is outside of '${policy.topDir}'.`);
     }
     this._path=this.#path;
   }
@@ -367,7 +367,7 @@ export class SFile {
   parent(){return this.up();}
   sibling(name:string) {
     const p=this.up();
-    if (!p) throw new Error(`Cannot get sibling of '/'`);
+    if (!p) throw new Error(`Cannot get sibling of '${this.path()}'`);
     return p.rel(name);
   }
   closest(name:string|((f:SFile)=>any)):SFile|undefined {
