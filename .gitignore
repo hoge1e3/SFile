@@ -7,3 +7,4 @@ test/test.js
 src/MIMETypes.d.ts
 src/SFile.d.ts
 test/test.d.ts
+.tsbuildinfo
