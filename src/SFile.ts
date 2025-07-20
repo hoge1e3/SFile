@@ -585,7 +585,10 @@ export class SFile {
                 const isd=r.isDir({nofollow:true});
                 if (options.followlink && isd) {
                   yield* walk(r);
-                } else if (!isd || includeDir) yield r;
+                } else if (!isd || includeDir) {
+                  if (options.followlink) yield r;
+                  else yield file;
+                }
               } else if (file.isDir({nofollow:true})) {
                 yield* walk(file);
               } else {
