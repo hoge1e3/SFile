@@ -351,10 +351,10 @@ Object.assign(DataURL.prototype, {
         return this.url;
     },
     dataURL2bin: function (dataURL) {
-        assert.is(arguments, [String]);
+        assert.is(dataURL, String);
         var reg = /^data:([^;]+);base64,/i;
         var r = reg.exec(dataURL);
-        assert(r, ["malformed dataURL:", dataURL]);
+        if (!r) {throw new Error(`malformed dataURL: ${dataURL.slice(0,100)}`);}
         this.contentType = r[1];
         this.buffer = Content.Base64_To_ArrayBuffer(dataURL.substring(r[0].length), this.binType);
         return assert.is(this.buffer, this.binType);
