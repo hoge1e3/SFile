@@ -1,7 +1,7 @@
 
-import { default as Content } from "./Content.js";
+import { Content } from "@hoge1e3/content";
+export { Content } from "@hoge1e3/content";
 import {MIMETypes,defaultMIMETYpes} from "./MIMETypes.js";
-export { default as Content } from "./Content.js";
 export type DependencyContainer={
   fs: typeof import("node:fs"),
   path: typeof import("node:path"),
@@ -195,16 +195,16 @@ export class SFile {
     return this;
   }
   bytes(b:ArrayBuffer):this;
-  bytes(b:Buffer):this;
-  bytes():Buffer;
-  bytes(b?: ArrayBuffer|Buffer) {
+  bytes(b:Uint8Array<ArrayBuffer>):this;
+  bytes():ArrayBuffer|Uint8Array<ArrayBuffer>;
+  bytes(b?: ArrayBuffer|Uint8Array<ArrayBuffer>):this|ArrayBuffer|Uint8Array<ArrayBuffer> {
     if (b === undefined) {
       return this.getBytes();
     }
     this.setBytes(b);
     return this;
   }
-  setBytes<T extends ArrayBuffer|Buffer>(b: T) {
+  setBytes<T extends ArrayBuffer|Uint8Array<ArrayBuffer>>(b: T) {
     const {fs,path,Buffer}=this.#fs.deps;
     this.prepareDir();
     if (Content.isArrayBuffer(b)) {
@@ -216,7 +216,7 @@ export class SFile {
     this.cache.clear();
     return b;
   }
-  getBytes(options?:BinTypeOption):Buffer|ArrayBuffer {
+  getBytes(options?:BinTypeOption):Uint8Array<ArrayBuffer>|ArrayBuffer {
     const {fs,path,Buffer}=this.#fs.deps;
     const binType=options?.binType||Buffer;
     const buffer = fs.readFileSync(this.#path);

@@ -514,7 +514,7 @@ function testContent() {
         if (!contEq(dst as any, conts[tto][SRC] as any)) {
             _console.log("Actual: ",dst);
             _console.log("Expected: ",conts[tto][SRC]);
-            _console.log("Content bufType ", c.bufType );
+            //_console.log("Content bufType ", c.bufType );
             throw new Error(`Fail at ${tfrom} to ${tto}`);
         }
     }

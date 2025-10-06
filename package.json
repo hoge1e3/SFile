@@ -32,7 +32,7 @@
     "src"
   ],
   "devDependencies": {
-    "@types/node": "^22.10.2",
+    "@types/node": "^24.6.2",
     "@types/chai": "^5.0.1",
     "jszip": "^3.10.1",
     "typescript": "^5.7.2"
