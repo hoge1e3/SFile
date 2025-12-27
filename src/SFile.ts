@@ -467,7 +467,7 @@ export class SFile {
     return dst;
   }
   contentType() {
-    return this.#fs.mimeTypes[this.ext()]||"application/octet-stream";
+    return addEncoding(this.#fs.mimeTypes[this.ext()]||"application/octet-stream");
   }
   isText(){
     return this.contentType().match(/^text\//);
@@ -804,4 +804,9 @@ export class SFile {
 
   }
 
+}
+function addEncoding(ctype:string){
+  return ctype+
+  (ctype.startsWith("text/")?
+  ";charset=utf8":"");
 }
