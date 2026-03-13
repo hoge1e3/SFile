@@ -9,10 +9,11 @@ export type DependencyContainer={
   //process: typeof import("node:process"),
 }
 type BinTypeOption={binType:typeof Buffer|typeof ArrayBuffer};
-type Stats=import("node:fs").Stats;
+type Stats=import("node:fs").Stats& {linkPath?:string, hasFineMtime?:boolean};;
 export type MetaInfo={
   lastUpdate:number,
   link?: string,
+  hasFineMtime?: boolean,
   // if this is a link, indicates whether the destination is a directory
   //isDirPath?: boolean, // undefined=unknown, true=dir, false=regular file
   //stat?: Stats,  // if this is a link, the stats of the destination
@@ -247,11 +248,13 @@ export class SFile {
       return {
         lastUpdate: lstat.mtimeMs,
         link: lstat.isSymbolicLink() ? fs.readlinkSync(this.#path) : undefined,
+        ...(lstat.hasFineMtime?{hasFineMtime:true}:{}),
       };
     } else {
       const stat = this.stat();
       return {
         lastUpdate: stat.mtimeMs,
+        ...(stat.hasFineMtime?{hasFineMtime:true}:{}),
         // link is undefined because the link is resolved by statSync
       };  
     }
