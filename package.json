@@ -27,14 +27,14 @@
     "url": "https://github.com/hoge1e3/SFile/issues"
   },
   "homepage": "https://github.com/hoge1e3/SFile#readme",
-  "dependencies": {},
+  "dependencies": {
+    "@hoge1e3/content": "^2.0.0"
+  },
   "files": [
     "src"
   ],
   "devDependencies": {
     "@types/node": "^24.7.2",
-    "@types/chai": "^5.0.1",
-    "jszip": "^3.10.1",
     "typescript": "^5.8.3"
   }
 }
