@@ -1,6 +1,6 @@
 {
   "name": "@hoge1e3/sfile",
-  "version": "1.6.7",
+  "version": "2.0.1",
   "description": "node.js fs Comprehensive File Wrapper",
   "main": "./src/SFile.js",
   "types": "./src/SFile.d.ts",
