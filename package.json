@@ -28,7 +28,7 @@
   },
   "homepage": "https://github.com/hoge1e3/SFile#readme",
   "dependencies": {
-    "@hoge1e3/content": "^2.0.0"
+    "@hoge1e3/content": "^2.0.1"
   },
   "files": [
     "src"
