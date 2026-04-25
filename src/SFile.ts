@@ -344,7 +344,7 @@ export class SFile {
     return path.extname(this.#path);
   }
 
-  truncExt(e:string) {
+  truncExt(e?:string) {
     const name = this.name();
     if (e === undefined) {
       e = this.ext();
