@@ -52,7 +52,7 @@ export class FileSystemFactory {
   mimeTypes: MIMETypes=defaultMIMETYpes;
   #defaultPolicy?: Policy;
   constructor(public deps: DependencyContainer) {
-      Content.setBufferPolyfill(deps.Buffer);
+    Content.setBufferPolyfill(deps.Buffer);
   }
   addMIMEType(extension:string, contentType:string) {
     this.mimeTypes[extension]=contentType;
@@ -209,7 +209,7 @@ export class SFile {
     const {fs,path,Buffer}=this.#fs.deps;
     this.prepareDir();
     if (Content.isArrayBuffer(b)) {
-      const bb=Buffer.from(b);
+      const bb=new Uint8Array(b);// Buffer.from(b);
       fs.writeFileSync(this.#path, bb);
     } else {
       fs.writeFileSync(this.#path, b);
