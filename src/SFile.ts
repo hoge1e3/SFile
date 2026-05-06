@@ -756,11 +756,12 @@ export class SFile {
     if(!stat.isSymbolicLink())return undefined;
     return fs.realpathSync(this.#path);
   }
-  link(to:SFile) {
+  link(to:SFile|string) {
     //to: existent this: non-existent
     //`this` points to `to`
+    // string for relative link
     const {fs,path}=this.#fs.deps;
-    fs.symlinkSync(to.path(), this.#path, "junction");
+    fs.symlinkSync(typeof to==="string"?to:to.path(), this.#path, "junction");
     this.cache.clear();
   }
   resolveLink() {
