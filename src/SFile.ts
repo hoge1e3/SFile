@@ -81,8 +81,11 @@ export class FileSystemFactory {
     //const normalizedPath = this._normalizePath(inputPath);
     return new SFile(this, inputPath, this.#defaultPolicy);//normalizedPath);
   }
-  getAsync(inputPath:string) {
-    return new SFileAsync(this, inputPath, this.#defaultPolicy);//normalizedPath);
+  sfile(inputPath:string) {
+    return new SFile(this, inputPath, this.#defaultPolicy);//normalizedPath);
+  }
+  afile(inputPath:string) {
+    return new AFile(this, inputPath, this.#defaultPolicy);//normalizedPath);
   }
   setDefaultPolicy(policy?:Policy) {
     this.#defaultPolicy=policy;
@@ -150,6 +153,12 @@ export class SFile {
   clone(_path?:string) {
     const path=_path||this.#path;
     return new SFile(this.#fs, path, this.#policy);
+  }
+  async(){
+    return new AFile(this.#fs,this.#path,this.#policy);
+  }
+  sync(){
+    return this;
   }
 
   // File content methods
@@ -488,7 +497,7 @@ export class SFile {
         return Content.plainText(text);
       }
     } else {*/
-      return Content.bin(fs.readFileSync(this.#path),this.contentType());
+      return Content.fromNodeBuffer(fs.readFileSync(this.#path),this.contentType());
     //}
   }
   setContent(c:Content):this{
@@ -818,7 +827,7 @@ function addEncoding(ctype:string){
   ";charset=utf8":"");
 }
 //--- async
-export class SFileAsync {
+export class AFile {
   #path:string;
   #fs:FileSystemFactory;
   #policy: Policy|undefined;
@@ -831,14 +840,27 @@ export class SFileAsync {
       throw new Error(`Creating '${filePath}' is prohibited by policy. It is outside of '${policy.topDir}'.`);
     }
   }
+  sync(){
+    return new SFile(this.#fs,this.#path,this.#policy);
+  }
+  async(){
+    return this;
+  }
   async getContent():Promise<Content> {
     const {fs,path}=this.#fs.deps;
-    const buf=Content.fromUint8Array()
+    const buf=await fs.promises.readFile(this.#path);
+    return Content.fromUint8Array(buf);
   }
   async setContent(c:Content):Promise<void> {
-
+    const {fs,path}=this.#fs.deps;
+    await fs.promises.writeFile(this.#path, c.toUint8Array());
   }
-  async text():Promise<string> {
-
+  async text(text?:string):Promise<string> {
+    if (typeof text==="string") {
+      await this.setContent(Content.fromMixedText(text));
+      return text;
+    }
+    return (await this.getContent()).toMixedText();
   }
+  //WIP
 }
