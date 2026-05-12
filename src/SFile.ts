@@ -81,6 +81,9 @@ export class FileSystemFactory {
     //const normalizedPath = this._normalizePath(inputPath);
     return new SFile(this, inputPath, this.#defaultPolicy);//normalizedPath);
   }
+  getAsync(inputPath:string) {
+    return new SFileAsync(this, inputPath, this.#defaultPolicy);//normalizedPath);
+  }
   setDefaultPolicy(policy?:Policy) {
     this.#defaultPolicy=policy;
   }
@@ -742,8 +745,8 @@ export class SFile {
     if (!p) throw new Error(`Cannot prepare dir for '/'`);
     return p.exists() || p.mkdir();
   }
-  contains(child:SFile) {
-    return SFile.containsPath(this.path(), child.path());
+  contains(child:SFile|string) {
+    return SFile.containsPath(this.path(), typeof child==="string"? child:child.path());
     // truncSep(child.path()).startsWith(truncSep(this.path()));
   }
   static containsPath(parent:string, child:string){
@@ -813,4 +816,29 @@ function addEncoding(ctype:string){
   return ctype+
   (ctype.startsWith("text/")?
   ";charset=utf8":"");
+}
+//--- async
+export class SFileAsync {
+  #path:string;
+  #fs:FileSystemFactory;
+  #policy: Policy|undefined;
+  public cache = new Cache<CachedInfo>();
+  constructor(__fs:FileSystemFactory, filePath:string, policy?: Policy) {
+    this.#fs=__fs;
+    this.#path = __fs._normalizePath(filePath); 
+    this.#policy=policy;
+    if (policy && !policy.topDir.contains(this.#path)) {
+      throw new Error(`Creating '${filePath}' is prohibited by policy. It is outside of '${policy.topDir}'.`);
+    }
+  }
+  async getContent():Promise<Content> {
+    const {fs,path}=this.#fs.deps;
+    const buf=Content.fromUint8Array()
+  }
+  async setContent(c:Content):Promise<void> {
+
+  }
+  async text():Promise<string> {
+
+  }
 }
